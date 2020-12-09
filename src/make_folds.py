@@ -20,7 +20,7 @@ def make_folds(df: pd.DataFrame, n_splits: int = 5, save_dir: Optional[str] = No
     Output: 
         df: train meta with splitted folds
     """
-    skf = StratifiedKFold(n_splits = n_splits, shuffl = True, random_state = 42)
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     df_folds = df[['image_name']].copy()
     df_folds.loc[:, 'bbox_count'] = 1
     df_folds = df_folds.groupby('image_name').count()
@@ -63,4 +63,4 @@ if __name__ == "__main__":
     video_labels['h'] = video_labels['height']
     print(video_labels.head())
 
-    make_folds(video_labels, n_splits = 5, save_dir = DATA_DIR)
+    df_folds = make_folds(video_labels, n_splits=4, save_dir=DATA_DIR)
