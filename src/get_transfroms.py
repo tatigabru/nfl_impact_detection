@@ -42,6 +42,11 @@ def get_train_transforms(img_size: int = 512) -> A.Compose:
             A.Blur(blur_limit=3, p=1.0),
             A.MedianBlur(blur_limit=3, p=1.0)
             ],p=0.1),
+        # noise                
+        A.OneOf([
+            A.GaussNoise(p=0.5),                 
+            A.RandomGamma(p=0.4),                    
+            ],p=0.5),   
         A.Resize(height=img_size, width=img_size, p=1),
         A.Cutout(num_holes=24, max_h_size=img_size // 50, max_w_size=img_size // 50, fill_value=0, p=0.5),
        # ToTensorV2(p=1.0),

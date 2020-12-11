@@ -60,10 +60,9 @@ if __name__ == "__main__":
     out_dir = os.path.join(DATA_DIR, '../../data/train_images_impact')
     os.makedirs(out_dir, exist_ok=True)
 
-    for video_name in uniq_video:
-        make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=True)
+    #for video_name in uniq_video:
+    #    make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=True)
 
-    test_videos = os.listdir("../../data/nfl-impact-detection/test")
-    
+    test_videos = os.listdir("../../data/nfl-impact-detection/test")    
     pool = Pool()
     pool.map(write_frames, map(lambda video_name: f"{video_dir}/{video_name}", test_videos))
