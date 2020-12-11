@@ -55,9 +55,7 @@ class HelmetDataset(Dataset):
         image_id = self.image_ids[index]              
         image, boxes = load_image_boxes(self.images_dir, image_id, self.labels)        
         # use only one class: helmet
-        labels = np.full((boxes.shape[0],), 1)
-        #labels = torch.ones((boxes.shape[0],), dtype=torch.int64)       
-        
+        labels = np.full((boxes.shape[0],), 1)        
         if self.transforms:
             sample = self.transforms(**{
                     'image': image,
@@ -69,20 +67,18 @@ class HelmetDataset(Dataset):
 
         if self.normalise:
             image = normalize(image)
-        #else:
-            #image /= 255.0
+        else:
+            image = image.astype(np.float32)/255
 
-        # To tensors
-        # https://github.com/rwightman/efficientdet-pytorch/blob/814bb96c90a616a20424d928b201969578047b4d/data/dataset.py#L77
-        boxes[:, [0, 1, 2, 3]] = boxes[:, [1, 0, 3, 2]] # yxyx
-        boxes = torch.as_tensor(boxes, dtype=torch.float)
-        labels = torch.as_tensor(labels, dtype=torch.float)
-
+        # To tensors        
+        # boxes[:, [0, 1, 2, 3]] = boxes[:, [1, 0, 3, 2]] # yxyx -- why ???
+        boxes = torch.as_tensor(boxes, dtype=torch.int32)
+        labels = torch.as_tensor(labels, dtype=torch.int32)
         target = {}
         target['boxes'] = boxes
         target['labels'] = labels
         # post-processing
-        image = image.transpose(2,0,1).astype(np.float32) # channels first
+        image = image.transpose(2,0,1).astype(np.float32) # channels first for torch
         image = torch.from_numpy(image)
 
         return image, target, image_id
@@ -98,8 +94,7 @@ def load_image_boxes(images_dir: str, image_id: str, labels: pd.DataFrame, forma
         
     """
     image = cv2.imread(f'{images_dir}/{image_id}', cv2.IMREAD_COLOR)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
-    print(image.shape)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)    
     records = labels[labels['image'] == image_id]
     # coco format
     boxes = records[['left', 'top', 'width', 'height']].values
@@ -129,21 +124,19 @@ def normalize(img: np.array, mean: list=[0.485, 0.456, 0.406], std: list=[0.229,
     return img
 
 
-def collate_fn(batch):
-    return tuple(zip(*batch))
-
-
 def test_load_image():
     images_dir = TRAIN_DIR               
     labels = pd.read_csv(META_FILE)
     image_id = labels.image.unique()[0]
     print(f'{images_dir}/{image_id}')
-    image = cv2.imread(f'{images_dir}/{image_id}', cv2.IMREAD_COLOR)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
-    #image, boxes = load_image_boxes(images_dir, image_id, labels)
+    image, boxes = load_image_boxes(images_dir, image_id, labels)    
+    image = image.astype(np.float32) / 255
+    for box in boxes:
+        cv2.rectangle(image, (box[0], box[1]), (box[2],  box[3]), (255, 0, 0), 2)    
     plt.figure(1, figsize=(12,6))        
     plt.imshow(image) 
     plt.title(image_id)
+    plt.show()
     
 
 def test_dataset() -> None:
@@ -154,7 +147,7 @@ def test_dataset() -> None:
                 labels_df = df, 
                 img_size  = 512,                
                 transforms= None,
-                normalise = True,                
+                normalise = False,                
     )   
     img, target, image_id = train_dataset[10]
     plot_img_target(img, target, image_id, fig_num = 1)                
@@ -162,23 +155,18 @@ def test_dataset() -> None:
 
 def plot_img_target(image: torch.Tensor, target: torch.Tensor, image_id: str = '', fig_num: int = 1) -> None:
     """Helper to plot image and target together"""
-    image = image.numpy()
-    # transpose the input volume CXY to XYC order
-    image = image.transpose(1,2,0)     
-    image = np.rint(image).astype(np.uint8)
+    image = image.permute(1,2,0).cpu().numpy()
     print(image.shape)
-    boxes = target['boxes'].numpy()
-    labels = target['labels'].numpy()
+    # Back to 255
+    #image = np.rint(image*255).astype(np.uint8)    
+    labels = target['labels'].cpu().numpy().astype(np.int32)
+    boxes = target['boxes'].cpu().numpy().astype(np.int32)
     boxes = np.squeeze(boxes)  
     labels = np.squeeze(labels)  
     print(boxes.shape)
-    print(labels.shape)
-    
-    for bbox in boxes:  
-        x_min, y_min, x_max, y_max = bbox
-        x_min, x_max, y_min, y_max = int(x_min), int(x_max), int(y_min), int(y_max)   
-        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)      
-        
+    print(labels.shape)    
+    for box in boxes:                  
+        cv2.rectangle(image, (box[0], box[1]), (box[2],  box[3]), (255, 0, 0), 2)        
     plt.figure(fig_num, figsize=(12,6))        
     plt.imshow(image) 
     plt.title(image_id)
@@ -186,16 +174,24 @@ def plot_img_target(image: torch.Tensor, target: torch.Tensor, image_id: str = '
     plt.show()
 
 
-if __name__ == "__main__":
-    
+def test_image():
+    img_path = '../../data/nfl-impact-detection/images/57503_000116_Endzone_frame443.jpg'
+    image = cv2.imread(img_path, cv2.IMREAD_COLOR)    
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    plt.figure(figsize=(12,6))        
+    plt.imshow(image) 
+    plt.show() 
+
+
+if __name__ == "__main__":    
     DATA_DIR = '../../data/nfl-impact-detection/'
     META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
-    
-    
+       
     # Read in the image labels file
     img_labels = pd.read_csv(META_FILE)
     print(img_labels.head())
     TRAIN_DIR = os.path.join(DATA_DIR, 'images')
 
-    test_load_image()
-    #test_dataset()
+    #test_load_image()
+    test_dataset()
+    
