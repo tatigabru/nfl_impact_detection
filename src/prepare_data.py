@@ -1,14 +1,9 @@
 import sys
 import os
-from datetime import datetime
-import time
-import random
 import cv2
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from glob import glob
-import pandas as pd
+from multiprocessing import Pool
 from tqdm import tqdm
 
 
@@ -32,11 +27,27 @@ def make_images_from_video(video_name, video_labels, video_dir, out_dir, only_wi
             boxes = video_labels.query("video == @video_name and frame == @frame")
             boxes_with_impact = boxes[boxes.impact > 1.0]
             if boxes_with_impact.shape[0] == 0:
-                continue
-        img_name = f"{video_name}_frame{frame}"
+                continue        
         image_path = f'{out_dir}/{video_name}'.replace('.mp4',f'_{frame}.png')
         _ = cv2.imwrite(image_path, img)
     
+
+def write_frames(video_path):
+    video_name = os.path.basename(video_path)
+    output_base_path = "../../data/images_test"
+    os.makedirs(os.path.join(output_base_path, video_name), exist_ok=True)
+    vidcap = cv2.VideoCapture(video_path)
+    frame = 0
+    while True:
+        more_frames, img = vidcap.read()
+        if not more_frames:
+            break
+        frame += 1
+        img_name = "{}".format(frame).zfill(6) + ".png"
+        success = cv2.imwrite(os.path.join(output_base_path, video_name, img_name), img)
+        if not success:
+            raise ValueError("couldn't write image successfully")
+
 
 if __name__ == "__main__":
     DATA_DIR = '../../data/nfl-impact-detection/'
@@ -46,12 +57,13 @@ if __name__ == "__main__":
     video_labels = pd.read_csv(META_FILE).fillna(0)
     uniq_video = video_labels.video.unique()
     
-    out_dir = os.path.join(DATA_DIR, 'train_images_impact')
+    out_dir = os.path.join(DATA_DIR, '../../data/train_images_impact')
     os.makedirs(out_dir, exist_ok=True)
+
     for video_name in uniq_video:
-        make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=False)
+        make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=True)
+
+    test_videos = os.listdir("../../data/nfl-impact-detection/test")
     
-    #out_dir = os.path.join(DATA_DIR, 'train_images_all')
-    #os.makedirs(out_dir, exist_ok=True)
-    #for video_name in uniq_video:
-    #    make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=False)
+    pool = Pool()
+    pool.map(write_frames, map(lambda video_name: f"{video_dir}/{video_name}", test_videos))
