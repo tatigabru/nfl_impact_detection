@@ -123,8 +123,45 @@ def normalize(img: np.array, mean: list=[0.485, 0.456, 0.406], std: list=[0.229,
 
     return img
 
+      
+def plot_img_target(image: torch.Tensor, target: torch.Tensor, image_id: str = '', fig_num: int = 1) -> None:
+    """Helper to plot image and target together"""
+    image = image.permute(1,2,0).cpu().numpy()
+    print(image.shape)
+    # Back to 255
+    #image = np.rint(image*255).astype(np.uint8)    
+    labels = target['labels'].cpu().numpy().astype(np.int32)
+    boxes = target['boxes'].cpu().numpy().astype(np.int32)
+    boxes = np.squeeze(boxes)  
+    labels = np.squeeze(labels)  
+    print(boxes.shape)
+    print(labels.shape)    
+    for box in boxes:                  
+        cv2.rectangle(image, (box[0], box[1]), (box[2],  box[3]), (255, 0, 0), 2)        
+    plt.figure(fig_num, figsize=(12,6))        
+    plt.imshow(image) 
+    plt.title(image_id)
+    #plt.savefig(f'../../output/{image_id}_bboxes.png')
+    plt.show()
 
-def test_load_image():
+
+"""
+
+Tests
+
+"""
+def test_image() -> None:
+    """Visualise loaded image"""
+    img_path = '../../data/nfl-impact-detection/images/57503_000116_Endzone_frame443.jpg'
+    image = cv2.imread(img_path, cv2.IMREAD_COLOR)    
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    plt.figure(figsize=(12,6))        
+    plt.imshow(image) 
+    plt.show() 
+
+
+def test_load_image() -> None:
+    """Visualise loaded image and bboxes"""
     images_dir = TRAIN_DIR               
     labels = pd.read_csv(META_FILE)
     image_id = labels.image.unique()[0]
@@ -150,37 +187,23 @@ def test_dataset() -> None:
                 normalise = False,                
     )   
     img, target, image_id = train_dataset[10]
-    plot_img_target(img, target, image_id, fig_num = 1)                
+    plot_img_target(img, target, image_id, fig_num = 1)    
 
 
-def plot_img_target(image: torch.Tensor, target: torch.Tensor, image_id: str = '', fig_num: int = 1) -> None:
-    """Helper to plot image and target together"""
-    image = image.permute(1,2,0).cpu().numpy()
-    print(image.shape)
-    # Back to 255
-    #image = np.rint(image*255).astype(np.uint8)    
-    labels = target['labels'].cpu().numpy().astype(np.int32)
-    boxes = target['boxes'].cpu().numpy().astype(np.int32)
-    boxes = np.squeeze(boxes)  
-    labels = np.squeeze(labels)  
-    print(boxes.shape)
-    print(labels.shape)    
-    for box in boxes:                  
-        cv2.rectangle(image, (box[0], box[1]), (box[2],  box[3]), (255, 0, 0), 2)        
-    plt.figure(fig_num, figsize=(12,6))        
-    plt.imshow(image) 
-    plt.title(image_id)
-    #plt.savefig(f'../../output/{image_id}_bboxes.png')
-    plt.show()
-
-
-def test_image():
-    img_path = '../../data/nfl-impact-detection/images/57503_000116_Endzone_frame443.jpg'
-    image = cv2.imread(img_path, cv2.IMREAD_COLOR)    
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    plt.figure(figsize=(12,6))        
-    plt.imshow(image) 
-    plt.show() 
+def test_dataset_augs(transforms: A.Compose) -> None:
+    """Helper to test data augmentations"""
+    df = pd.read_csv(META_FILE)
+    train_dataset = HelmetDataset(
+                images_dir = TRAIN_DIR,               
+                labels_df = df, 
+                img_size  = 512,                
+                transforms= transforms,
+                normalise = False,                
+    )   
+    for count in range(5):
+        # get dataset sample and plot it
+        im, target, image_id = train_dataset[10]
+        plot_img_target(im, target, image_id, fig_num = count+1)
 
 
 if __name__ == "__main__":    
@@ -194,4 +217,6 @@ if __name__ == "__main__":
 
     #test_load_image()
     test_dataset()
+    test_dataset_augs(transforms = get_train_transforms(img_size = 512))
+
     
