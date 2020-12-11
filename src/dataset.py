@@ -6,7 +6,7 @@ import re
 
 from PIL import Image
 
-# from torchvision import transforms
+from torchvision import transforms
 import albumentations as A
 from albumentations.pytorch.transforms import ToTensorV2, ToTensor
 from typing import Tuple, List
@@ -16,6 +16,9 @@ from torch.utils.data.sampler import SequentialSampler
 
 from matplotlib import pyplot as plt
 from get_transfroms import get_valid_transforms, get_train_transforms
+
+BOX_COLOR = (255, 0, 0) # Red
+TEXT_COLOR = (255, 255, 255) # White
 
 
 class HelmetDataset(Dataset):
@@ -65,9 +68,9 @@ class HelmetDataset(Dataset):
             boxes = np.array(sample['bboxes'])                                
 
         if self.normalise:
-            image = self.normalise(image)
-        else:
-            image /= 255.0
+            image = normalize(image)
+        #else:
+            #image /= 255.0
 
         # To tensors
         # https://github.com/rwightman/efficientdet-pytorch/blob/814bb96c90a616a20424d928b201969578047b4d/data/dataset.py#L77
@@ -78,8 +81,8 @@ class HelmetDataset(Dataset):
         target = {}
         target['boxes'] = boxes
         target['labels'] = labels
-        target['image_id'] = torch.tensor([image_id])
-        # image = transforms.ToTensor()(image)
+        # post-processing
+        image = image.transpose(2,0,1).astype(np.float32) # channels first
         image = torch.from_numpy(image)
 
         return image, target, image_id
@@ -96,9 +99,11 @@ def load_image_boxes(images_dir: str, image_id: str, labels: pd.DataFrame, forma
     """
     image = cv2.imread(f'{images_dir}/{image_id}', cv2.IMREAD_COLOR)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+    print(image.shape)
     records = labels[labels['image'] == image_id]
     # coco format
     boxes = records[['left', 'top', 'width', 'height']].values
+    print(boxes.shape)
     # pascal voc format    
     if format == 'pascal_voc': # xyxy
         boxes[:, 2] = boxes[:, 0] + boxes[:, 2] 
@@ -128,11 +133,24 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
+def test_load_image():
+    images_dir = TRAIN_DIR               
+    labels = pd.read_csv(META_FILE)
+    image_id = labels.image.unique()[0]
+    print(f'{images_dir}/{image_id}')
+    image = cv2.imread(f'{images_dir}/{image_id}', cv2.IMREAD_COLOR)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+    #image, boxes = load_image_boxes(images_dir, image_id, labels)
+    plt.figure(1, figsize=(12,6))        
+    plt.imshow(image) 
+    plt.title(image_id)
+    
+
 def test_dataset() -> None:
     """Helper to vizualise a sample from the data set"""
     df = pd.read_csv(META_FILE)
     train_dataset = HelmetDataset(
-                images_dir = TRAIN_ROOT_PATH,               
+                images_dir = TRAIN_DIR,               
                 labels_df = df, 
                 img_size  = 512,                
                 transforms= None,
@@ -142,43 +160,25 @@ def test_dataset() -> None:
     plot_img_target(img, target, image_id, fig_num = 1)                
 
 
-def visualize_bbox(img, bbox, class_name, color=BOX_COLOR, thickness=2):
-    """Visualizes a single bounding box on the image"""
-    x_min, y_min, x_max, y_max = bbox
-    x_min, x_max, y_min, y_max = int(x_min), int(x_max), int(y_min), int(y_max)
-   
-    cv2.rectangle(img, (x_min, y_min), (x_max, y_max), color=color, thickness=thickness)
-    
-    ((text_width, text_height), _) = cv2.getTextSize(class_name, cv2.FONT_HERSHEY_SIMPLEX, 0.35, 1)    
-    cv2.rectangle(img, (x_min, y_min - int(1.3 * text_height)), (x_min + text_width, y_min), BOX_COLOR, -1)
-    cv2.putText(
-        img,
-        text=class_name,
-        org=(x_min, y_min - int(0.3 * text_height)),
-        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-        fontScale=0.35, 
-        color=TEXT_COLOR, 
-        lineType=cv2.LINE_AA,
-    )
-    return img
-
-
 def plot_img_target(image: torch.Tensor, target: torch.Tensor, image_id: str = '', fig_num: int = 1) -> None:
     """Helper to plot image and target together"""
     image = image.numpy()
-    print(image.shape)
     # transpose the input volume CXY to XYC order
     image = image.transpose(1,2,0)     
-    image = np.rint(image*255).astype(np.uint8)
+    image = np.rint(image).astype(np.uint8)
+    print(image.shape)
     boxes = target['boxes'].numpy()
     labels = target['labels'].numpy()
     boxes = np.squeeze(boxes)  
     labels = np.squeeze(labels)  
     print(boxes.shape)
     print(labels.shape)
-    class_name = 'Helmet'
-    for bbox in boxes:        
-        image = visualize_bbox(image, bbox, class_name)
+    
+    for bbox in boxes:  
+        x_min, y_min, x_max, y_max = bbox
+        x_min, x_max, y_min, y_max = int(x_min), int(x_max), int(y_min), int(y_max)   
+        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)      
+        
     plt.figure(fig_num, figsize=(12,6))        
     plt.imshow(image) 
     plt.title(image_id)
@@ -191,8 +191,11 @@ if __name__ == "__main__":
     DATA_DIR = '../../data/nfl-impact-detection/'
     META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
     
+    
     # Read in the image labels file
     img_labels = pd.read_csv(META_FILE)
     print(img_labels.head())
-    TRAIN_ROOT_PATH = os.path.join(DATA_DIR, 'train_images')
-    test_dataset()
+    TRAIN_DIR = os.path.join(DATA_DIR, 'images')
+
+    test_load_image()
+    #test_dataset()
