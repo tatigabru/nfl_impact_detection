@@ -259,7 +259,7 @@ def enumerate_images(test_dir):
 
 
 def do_main():
-    neptune.init('ods/wheat')
+    neptune.init('tati/nfl')
     # Create experiment with defined parameters
     neptune.create_experiment(name=model_name,
                               params=PARAMS,

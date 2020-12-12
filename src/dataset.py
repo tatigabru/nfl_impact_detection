@@ -71,13 +71,16 @@ class HelmetDataset(Dataset):
         else:
             image = image.astype(np.float32)/255
 
-        # To tensors        
-        # boxes[:, [0, 1, 2, 3]] = boxes[:, [1, 0, 3, 2]] # yxyx -- why ???
-        boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        labels = torch.as_tensor(labels, dtype=torch.float32)
+        # to tensors
+        # https://github.com/rwightman/efficientdet-pytorch/blob/814bb96c90a616a20424d928b201969578047b4d/data/dataset.py#L77
+        boxes[:, [0, 1, 2, 3]] = boxes[:, [1, 0, 3, 2]] # yxyx -- scecially for effdet
+        boxes = torch.as_tensor(boxes, dtype=torch.float)
+        labels = torch.as_tensor(labels, dtype=torch.float)
+
         target = {}
         target['boxes'] = boxes
         target['labels'] = labels
+        target['image_id'] = torch.tensor([index])
         # post-processing
         image = image.transpose(2,0,1).astype(np.float32) # channels first for torch
         image = torch.from_numpy(image)
@@ -99,7 +102,7 @@ def load_image_boxes(images_dir: str, image_id: str, labels: pd.DataFrame, forma
     records = labels[labels['image'] == image_id]
     # coco format
     boxes = records[['left', 'top', 'width', 'height']].values
-    print(boxes.shape)
+    # print(boxes.shape)
     # pascal voc format    
     if format == 'pascal_voc': # xyxy
         boxes[:, 2] = boxes[:, 0] + boxes[:, 2] 
