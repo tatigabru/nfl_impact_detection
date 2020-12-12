@@ -3,6 +3,7 @@ import random
 import re
 import sys
 import warnings
+os.system("pip install --no-deps 'timm_wheels/timm-0.1.26-py3-none-any.whl' > /dev/null")
 
 import albumentations as A
 import cv2
@@ -32,7 +33,6 @@ from src.helpers.model_helpers import (collate_fn, get_effdet_pretrain_names)
 from src.datasets.wheat_dataset import WheatDataset
 from src.datasets.get_transforms import (get_train_transforms, get_transforms,
                                      get_valid_transforms, set_augmentations)
-
 warnings.filterwarnings('ignore')
 
 

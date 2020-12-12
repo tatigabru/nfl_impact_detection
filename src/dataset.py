@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import SequentialSampler
 
 from matplotlib import pyplot as plt
-from get_transfroms import get_valid_transforms, get_train_transforms
+from get_transforms import get_valid_transforms, get_train_transforms
 
 BOX_COLOR = (255, 0, 0) # Red
 TEXT_COLOR = (255, 255, 255) # White

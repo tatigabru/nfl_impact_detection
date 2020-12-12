@@ -17,25 +17,23 @@ from torch.utils.data.sampler import SequentialSampler
 from torchvision import transforms
 from tqdm import tqdm
 sys.path.append("../../timm-efficientdet-pytorch")
-sys.path.append("../src")
 
 import neptune
 from effdet import DetBenchTrain, DetBenchEval, EfficientDet, get_efficientdet_config
 from effdet.efficientdet import HeadNet
 from typing import Optional, List, Tuple
 
-from src.helpers.model_helpers import (collate_fn, fix_seed)
+from helpers.model_helpers import (collate_fn, fix_seed)
 from dataset import HelmetDataset
 from get_transforms import (get_train_transforms, get_valid_transforms)
 
 warnings.filterwarnings('ignore')
-
 fix_seed(1234)
 
 print(torch.__version__)
 print(neptune.__version__)
 
-DATA_DIR = '../../data/nfl-impact-detection/'
+DATA_DIR = '../../data/'
 TRAIN_DIR = os.path.join(DATA_DIR, 'images')
 META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
 FOLDS_FILE = os.path.join(DATA_DIR, 'image_folds.csv')
