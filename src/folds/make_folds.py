@@ -98,5 +98,14 @@ if __name__ == "__main__":
     DATA_DIR = '../../data/nfl-impact-detection/'
     META_FILE = os.path.join(DATA_DIR, 'train_labels.csv')
     video_labels = pd.read_csv(META_FILE).fillna(0)
-    
-    df_folds = create_folds(video_labels, nb_folds=4, save_dir=DATA_DIR)
+
+    video_labels['image_name'] = video_labels['video'].str.replace('.mp4', '') + '_' + video_labels['frame'].astype(str) + '.png'
+   # df_folds = create_folds(video_labels, nb_folds=4, save_dir=DATA_DIR)
+
+    FOLDS_FILE = os.path.join(DATA_DIR, 'video_folds.csv')
+    video_labels['fold'] = -1 
+    video_labels['fold'] = video_labels.loc[train_images_df['fold'] == fold].image.values
+    images_train = train_images_df.loc[train_images_df['fold'] != fold].image.values
+
+   # META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
+   # FOLDS_FILE = os.path.join(DATA_DIR, 'image_folds.csv')

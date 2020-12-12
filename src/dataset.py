@@ -73,8 +73,8 @@ class HelmetDataset(Dataset):
 
         # To tensors        
         # boxes[:, [0, 1, 2, 3]] = boxes[:, [1, 0, 3, 2]] # yxyx -- why ???
-        boxes = torch.as_tensor(boxes, dtype=torch.int32)
-        labels = torch.as_tensor(labels, dtype=torch.int32)
+        boxes = torch.as_tensor(boxes, dtype=torch.float32)
+        labels = torch.as_tensor(labels, dtype=torch.float32)
         target = {}
         target['boxes'] = boxes
         target['labels'] = labels
