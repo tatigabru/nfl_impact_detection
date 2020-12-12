@@ -41,12 +41,39 @@ def make_folds(df: pd.DataFrame, n_splits: int = 5, save_dir: Optional[str] = No
     return df_folds
 
 
-if __name__ == "__main__":
-    
-    DATA_DIR = '../../data/nfl-impact-detection/'
-    META_FILE = os.path.join(DATA_DIR, 'train_labels.csv')
+def create_folds(df: pd.DataFrame, nb_folds: int, save_dir: Optional[str] = None) -> pd.DataFrame:
+    """
+    Create folds, split video-wise
+    Args: 
+        df       : train meta dataframe       
+        nb_folds : number of folds
+        save_dir : directory, where to save folds
+        if_save  : boolean flag weather to save the folds
+    Output: 
+        df: train meta with splitted folds
+    """
+    vids = df.video.unique()    
+    x = list(set([s[:12] for s in vids]))
+    # print(x, len(x))
+    kf = KFold(n_splits=nb_folds, shuffle=True, random_state=1234)
 
-    video_labels = pd.read_csv(META_FILE).fillna(0)
+    folds_df = pd.DataFrame()
+    folds_df["video"] = np.array(x)
+    x = folds_df["video"].values
+    folds_df["fold"] = -1  # set all folds to -1 initially    
+    # split folds
+    for fold, (train_index, test_index) in enumerate(kf.split(x)):       
+        x_test = x[test_index]        
+        folds_df.loc[test_index, "fold"] = fold
+    # save dataframe with folds
+    if save_dir:
+        folds_df.to_csv(f'{save_dir}/video_folds.csv', index=False)
+    
+    return folds_df
+
+
+def preprocess_video_meta(video_labels: pd.DataFrame) -> pd.DataFrame:
+    """Helper to preprocess video meta file"""
     video_labels_with_impact = video_labels[video_labels['impact'] > 0]
     for row in tqdm(video_labels_with_impact[['video','frame','label']].values):
         frames = np.array([-4,-3,-2,-1,1,2,3,4])+row[1]
@@ -57,10 +84,19 @@ if __name__ == "__main__":
     video_labels['image_name'] = video_labels['video'].str.replace('.mp4', '') + '_' + video_labels['frame'].astype(str) + '.png'
     video_labels = video_labels[video_labels.groupby('image_name')['impact'].transform("sum") > 0].reset_index(drop=True)
     video_labels['impact'] = video_labels['impact'].astype(int)+1
-    video_labels['x'] = video_labels['left']
-    video_labels['y'] = video_labels['top']
-    video_labels['w'] = video_labels['width']
-    video_labels['h'] = video_labels['height']
+   # video_labels['x'] = video_labels['left']
+   # video_labels['y'] = video_labels['top']
+   # video_labels['w'] = video_labels['width']
+   # video_labels['h'] = video_labels['height']
     print(video_labels.head())
 
-    df_folds = make_folds(video_labels, n_splits=4, save_dir=DATA_DIR)
+    return video_labels
+
+
+if __name__ == "__main__":
+    
+    DATA_DIR = '../../data/nfl-impact-detection/'
+    META_FILE = os.path.join(DATA_DIR, 'train_labels.csv')
+    video_labels = pd.read_csv(META_FILE).fillna(0)
+    
+    df_folds = create_folds(video_labels, nb_folds=4, save_dir=DATA_DIR)

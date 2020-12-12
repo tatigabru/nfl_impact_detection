@@ -82,10 +82,6 @@ PARAMS = {'fold' : fold,
           'checkpoints_dir': checkpoints_dir,            
          }
 
-train_boxes_df = pd.read_csv(META_FILE)
-train_images_df = pd.read_csv(FOLDS_FILE)
-print('Boxes original: ', len(train_boxes_df))
-
 
 def get_lr(optimizer ):
     for param_group in optimizer.param_groups:
@@ -97,6 +93,24 @@ def set_lr(optimizer, new_lr):
 
 def load_weights(model, weights_file):
     model.load_state_dict(torch.load(weights_file, map_location=f'cuda:{gpu_number}'))
+
+
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
 
 
 class ModelManager():
@@ -225,8 +239,7 @@ class ModelManager():
         
         # validate loss        
         print('\nValidation loss: ', current_loss)
-        neptune.log_metric('Validation loss', current_loss)
-        
+        neptune.log_metric('Validation loss', current_loss)        
               
         if current_loss < self.best_loss - loss_delta:
             print(f'\nLoss has been improved from {self.best_loss} to {current_loss}')
@@ -257,7 +270,6 @@ class ModelManager():
             print('curr_lr_loss improved')
             self.curr_lr_loss = current_loss
             self.best_lr_epoch = epoch
-
         return True
 
 
@@ -277,6 +289,9 @@ def do_main():
 
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
     print(device)
+    train_boxes_df = pd.read_csv(META_FILE)
+    train_images_df = pd.read_csv(FOLDS_FILE)
+    print('Boxes original: ', len(train_boxes_df))
 
     print(len(train_boxes_df))
     print(len(train_images_df))
@@ -294,24 +309,24 @@ def do_main():
 
     manager = ModelManager(model_train, model_eval, device)
 
-    images_val = train_images_df.loc[
-        (train_images_df['fold'] == fold) & with_boxes_filter, image_id_column].values
-    images_train = train_images_df.loc[
-        (train_images_df['fold'] != fold) & with_boxes_filter, image_id_column].values 
+    images_val = train_images_df.loc[train_images_df['fold'] == fold].image.values
+    images_train = train_images_df.loc[train_images_df['fold'] != fold].image.values 
 
     print(f'\nTrain images:{len(images_train)}, validation images {len(images_val)}')
 
     # get datasets
     train_dataset = HelmetDataset(
-                images_dir = TRAIN_DIR,               
+                images_dir = TRAIN_DIR,   
+                image_ids = df.image.unique(),            
                 labels_df = df, 
                 img_size  = our_image_size,                
                 transforms= get_train_transforms(img_size = our_image_size),
                 normalise = False, 
     )   
 
-    train_dataset = HelmetDataset(
-                images_dir = TRAIN_DIR,               
+    valid_dataset = HelmetDataset(
+                images_dir = TRAIN_DIR,   
+                image_ids = df.image.unique(),            
                 labels_df = df, 
                 img_size  = our_image_size,                
                 transforms= get_valid_transforms(img_size = our_image_size),
@@ -335,7 +350,7 @@ def do_main():
         collate_fn=collate_fn
     )
 
-    weights_file = f'../checkpoints/{model_name}/{experiment_name}.pth'
+    weights_file = f'../../checkpoints/{model_name}/{experiment_name}.pth'
 
     #pretrain_weights_file = f'{checkpoints_dir}/{experiment_name}.pth'    
     #if os.path.exists(pretrain_weights_file):        

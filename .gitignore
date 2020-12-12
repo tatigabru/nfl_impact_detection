@@ -5,6 +5,8 @@ src/__pycache__/
 # timms
 omegaconf/
 timm-efficientdet-pytorch/
+notebooks/
+data/
 
 # notebook ckpts
 .ipynb_checkpoints/
