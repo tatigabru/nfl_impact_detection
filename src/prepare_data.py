@@ -49,6 +49,12 @@ def write_frames(video_path):
             raise ValueError("couldn't write image successfully")
 
 
+def make_test_frames():
+    test_videos = os.listdir("../../data/nfl-impact-detection/test")    
+    pool = Pool()
+    pool.map(write_frames, map(lambda video_name: f"{video_dir}/{video_name}", test_videos))
+
+
 if __name__ == "__main__":
     DATA_DIR = '../../data/nfl-impact-detection/'
     META_FILE = os.path.join(DATA_DIR, 'train_labels.csv')
@@ -57,12 +63,8 @@ if __name__ == "__main__":
     video_labels = pd.read_csv(META_FILE).fillna(0)
     uniq_video = video_labels.video.unique()
     
-    out_dir = os.path.join(DATA_DIR, '../../data/train_images_impact')
+    out_dir = os.path.join(DATA_DIR, '../../data/train_images_full')
     os.makedirs(out_dir, exist_ok=True)
-
-    #for video_name in uniq_video:
-    #    make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=True)
-
-    test_videos = os.listdir("../../data/nfl-impact-detection/test")    
-    pool = Pool()
-    pool.map(write_frames, map(lambda video_name: f"{video_dir}/{video_name}", test_videos))
+    for video_name in uniq_video:
+        make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=False)
+   

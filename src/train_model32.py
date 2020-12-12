@@ -284,7 +284,6 @@ def do_main():
                               params=PARAMS,
                               tags=[experiment_name, experiment_tag],
                               upload_source_files=[os.path.basename(__file__), 'get_transforms.py', 'dataset.py'])
-
     neptune.append_tags(f'fold_{fold}')   
 
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
@@ -292,9 +291,7 @@ def do_main():
     train_boxes_df = pd.read_csv(META_FILE)
     train_images_df = pd.read_csv(FOLDS_FILE)
     print('Boxes original: ', len(train_boxes_df))
-
-    print(len(train_boxes_df))
-    print(len(train_images_df))
+    print('Images original: ', len(train_images_df))
 
     # config models fro train and validation
     config = get_efficientdet_config('tf_efficientdet_d5')
@@ -311,7 +308,6 @@ def do_main():
 
     images_val = train_images_df.loc[train_images_df['fold'] == fold].image.values
     images_train = train_images_df.loc[train_images_df['fold'] != fold].image.values 
-
     print(f'\nTrain images:{len(images_train)}, validation images {len(images_val)}')
 
     # get datasets
@@ -347,7 +343,8 @@ def do_main():
         batch_size=inf_batch_size,
         shuffle=False,
         num_workers=num_workers,
-        collate_fn=collate_fn
+        collate_fn=collate_fn,
+        drop_last=False
     )
 
     weights_file = f'../../checkpoints/{model_name}/{experiment_name}.pth'
