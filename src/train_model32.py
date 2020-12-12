@@ -82,14 +82,6 @@ PARAMS = {'fold' : fold,
           'checkpoints_dir': checkpoints_dir,            
          }
 
-# Create experiment with defined parameters
-neptune.create_experiment (name=model_name,
-                          params=PARAMS, 
-                          tags=[experiment_name, experiment_tag, f'fold_{fold}'],
-                          upload_source_files=['train_effdet_val2.py', 'get_transforms.py', 'dataset.py'])    
-
-neptune.append_tags(['augs_d4'])
-
 train_boxes_df = pd.read_csv(META_FILE)
 train_images_df = pd.read_csv(FOLDS_FILE)
 print('Boxes original: ', len(train_boxes_df))
@@ -137,18 +129,10 @@ class ModelManager():
         batch_labels = [target['labels'].to(self.device) for target in batch_labels]
         loss, _, _ = self.train_model(batch_imgs, batch_boxes, batch_labels)
 
-        # Divide by the number of gradient accumulation steps
-        loss = loss / grad_accum
         loss.backward()
-
-        # Accumulate gradients
-        # https://gist.github.com/thomwolf/ac7a7da6b1888c2eeac8ac8b9b05d3d3
-        if batch_idx % grad_accum == grad_accum - 1:
-            optimizer.step()
-            optimizer.zero_grad()
-
-        return loss.item() * grad_accum
-
+        optimizer.step()
+        optimizer.zero_grad()
+        return loss.item()
 
     def predict(self, generator):
         self.eval_model.eval()
@@ -158,7 +142,7 @@ class ModelManager():
         pred_boxes = []
         pred_scores = []
         # sorry, now just hardcoded :(
-        original_image_size = 720
+        original_image_size = 1280
 
         tqdm_generator = tqdm(generator, mininterval=15)
         tqdm_generator.set_description('predict')
@@ -243,14 +227,7 @@ class ModelManager():
         print('\nValidation loss: ', current_loss)
         neptune.log_metric('Validation loss', current_loss)
         
-        # validate metric
-        nms_thr = 0.4
-        true_list, pred_boxes, pred_scores = self.predict(val_generator)
-        current_metric = competition_metric(true_list, pred_boxes, pred_scores, nms_thr)
-        print('\nValidation mAP', current_metric)
-        neptune.log_metric('Validation mAP', current_metric)
-        neptune.log_text('nms_threshold', str(nms_thr))
-        
+              
         if current_loss < self.best_loss - loss_delta:
             print(f'\nLoss has been improved from {self.best_loss} to {current_loss}')
             self.best_loss = current_loss
@@ -258,12 +235,6 @@ class ModelManager():
             torch.save(self.train_model.model.state_dict(), f'{weights_file}')
         else:
             print(f'\nLoss has not been improved from {self.best_loss}')            
-
-        if current_metric > self.best_metric:
-            print(f'\nmAP has been improved from {self.best_metric} to {current_metric}')
-            self.best_metric = current_metric
-            self.best_epoch = epoch
-            torch.save(self.train_model.model.state_dict(), f'{weights_file}_best_map')
 
         if epoch - self.best_epoch > overall_patience:
             print('\nEarly stop: training finished with patience!')
@@ -300,20 +271,15 @@ def do_main():
     neptune.create_experiment(name=model_name,
                               params=PARAMS,
                               tags=[experiment_name, experiment_tag],
-                              upload_source_files=[os.path.basename(__file__)])
+                              upload_source_files=[os.path.basename(__file__), 'get_transforms.py', 'dataset.py'])
 
-    neptune.append_tags(f'fold_{fold}')
-    neptune.append_tags(['grad_accum'])
+    neptune.append_tags(f'fold_{fold}')   
 
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
     print(device)
 
     print(len(train_boxes_df))
     print(len(train_images_df))
-
-    # Leave only > 0
-    print('Leave only train images with boxes (validation)')
-    with_boxes_filter = train_images_df[image_id_column].isin(train_boxes_df[image_id_column].unique())
 
     # config models fro train and validation
     config = get_efficientdet_config('tf_efficientdet_d5')
@@ -329,9 +295,9 @@ def do_main():
     manager = ModelManager(model_train, model_eval, device)
 
     images_val = train_images_df.loc[
-        (train_images_df[fold_column] == fold) & with_boxes_filter, image_id_column].values
+        (train_images_df['fold'] == fold) & with_boxes_filter, image_id_column].values
     images_train = train_images_df.loc[
-        (train_images_df[fold_column] != fold) & with_boxes_filter, image_id_column].values 
+        (train_images_df['fold'] != fold) & with_boxes_filter, image_id_column].values 
 
     print(f'\nTrain images:{len(images_train)}, validation images {len(images_val)}')
 
@@ -340,7 +306,7 @@ def do_main():
                 images_dir = TRAIN_DIR,               
                 labels_df = df, 
                 img_size  = our_image_size,                
-                transforms= get_train_transforms(img_size = our_image_size)
+                transforms= get_train_transforms(img_size = our_image_size),
                 normalise = False, 
     )   
 
@@ -348,7 +314,7 @@ def do_main():
                 images_dir = TRAIN_DIR,               
                 labels_df = df, 
                 img_size  = our_image_size,                
-                transforms= get_valid_transforms(img_size = our_image_size)
+                transforms= get_valid_transforms(img_size = our_image_size),
                 normalise = False, 
     )
 

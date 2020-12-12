@@ -37,6 +37,7 @@ class HelmetDataset(Dataset):
 
     def __init__(self,
                 images_dir: str,  
+                image_ids: list,
                 labels_df: pd.DataFrame,                                  
                 img_size: int = 512,                 
                 transforms: A.Compose = get_valid_transforms(),                               
@@ -45,7 +46,7 @@ class HelmetDataset(Dataset):
                 ):
         super().__init__()
         self.images_dir = images_dir                 
-        self.image_ids = labels_df.image.unique()
+        self.image_ids = image_ids
         self.labels = labels_df
         self.img_size = img_size
         self.transforms = transforms
@@ -180,7 +181,8 @@ def test_dataset() -> None:
     """Helper to vizualise a sample from the data set"""
     df = pd.read_csv(META_FILE)
     train_dataset = HelmetDataset(
-                images_dir = TRAIN_DIR,               
+                images_dir = TRAIN_DIR,   
+                image_ids = df.image.unique(),            
                 labels_df = df, 
                 img_size  = 512,                
                 transforms= None,
@@ -194,7 +196,8 @@ def test_dataset_augs(transforms: A.Compose) -> None:
     """Helper to test data augmentations"""
     df = pd.read_csv(META_FILE)
     train_dataset = HelmetDataset(
-                images_dir = TRAIN_DIR,               
+                images_dir = TRAIN_DIR,    
+                image_ids = df.image.unique(),           
                 labels_df = df, 
                 img_size  = 512,                
                 transforms= transforms,
