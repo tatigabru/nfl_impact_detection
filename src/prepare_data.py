@@ -5,6 +5,10 @@ import pandas as pd
 import numpy as np
 from multiprocessing import Pool
 from tqdm import tqdm
+from glob import glob
+
+DATA_DIR = '../../data/nfl-impact-detection/'
+META_FILE = os.path.join(DATA_DIR, 'train_labels.csv')
 
 
 def make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=True):
@@ -55,16 +59,20 @@ def make_test_frames():
     pool.map(write_frames, map(lambda video_name: f"{video_dir}/{video_name}", test_videos))
 
 
-if __name__ == "__main__":
-    DATA_DIR = '../../data/nfl-impact-detection/'
-    META_FILE = os.path.join(DATA_DIR, 'train_labels.csv')
-    video_dir = '../../data/nfl-impact-detection/train'
+if __name__ == "__main__":    
+   # video_dir = '../../data/nfl-impact-detection/train'
+   # video_labels = pd.read_csv(META_FILE).fillna(0)
+   # uniq_video = video_labels.video.unique()    
+   # out_dir = os.path.join(DATA_DIR, '../../data/train_images_full')
+   # os.makedirs(out_dir, exist_ok=True)
+   # for video_name in uniq_video:
+   #     make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=False)
+   
+    video_dir = '../../data/nfl-impact-detection/test'
+    uniq_video = os.listdir(video_dir)
 
-    video_labels = pd.read_csv(META_FILE).fillna(0)
-    uniq_video = video_labels.video.unique()
-    
-    out_dir = os.path.join(DATA_DIR, '../../data/train_images_full')
+   # uniq_video = [path.split('/')[-1] for path in glob(f'{video_dir}/*.mp4')]
+    out_dir = '../../data/nfl-impact-detection/test_images/'
     os.makedirs(out_dir, exist_ok=True)
     for video_name in uniq_video:
-        make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=False)
-   
+        make_images_from_video(video_name, pd.DataFrame(), video_dir, out_dir, only_with_impact=False)
