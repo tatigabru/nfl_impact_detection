@@ -47,7 +47,7 @@ train_batch_size = 4
 inf_batch_size = 16
 effective_train_batch_size = 4
 grad_accum = effective_train_batch_size // train_batch_size
-our_image_size = 512
+image_size = 512
 n_epochs = 60
 factor = 0.2
 start_lr = 1e-3
@@ -59,7 +59,7 @@ gpu_number = 0
 
 model_name = 'effdet5'
 experiment_tag = 'run1'
-experiment_name = f'{model_name}_fold{fold}_{our_image_size}_{experiment_tag}'
+experiment_name = f'{model_name}_fold{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{model_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
 
@@ -69,7 +69,7 @@ PARAMS = {'fold' : fold,
           'train_batch_size': train_batch_size,
           'effective_train_batch_size': effective_train_batch_size,
           'grad_accum': grad_accum,
-          'our_image_size': our_image_size,
+          'image_size': image_size,
           'n_epochs': n_epochs, 
           'factor': factor, 
           'start_lr': start_lr, 
@@ -277,10 +277,10 @@ def do_main():
     # config models fro train and validation
     config = get_efficientdet_config('tf_efficientdet_d5')
     net = EfficientDet(config, pretrained_backbone=False)
-    load_weights(net, '../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
+    load_weights(net, '../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
 
     config.num_classes = 1
-    config.image_size = our_image_size
+    config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
     model_train = DetBenchTrain(net, config)
     model_eval = DetBenchEval(net, config)
@@ -295,18 +295,18 @@ def do_main():
     train_dataset = HelmetDataset(
                 images_dir = TRAIN_DIR,   
                 image_ids = images_train[:160],            
-                labels_df = df, 
-                img_size  = our_image_size,                
-                transforms= get_train_transforms(img_size = our_image_size),
+                labels_df = train_boxes_df, 
+                img_size  = image_size,                
+                transforms= get_train_transforms(img_size = image_size),
                 normalise = False, 
     )   
 
     valid_dataset = HelmetDataset(
                 images_dir = TRAIN_DIR,   
                 image_ids = images_val[:160],            
-                labels_df = df, 
-                img_size  = our_image_size,                
-                transforms= get_valid_transforms(img_size = our_image_size),
+                labels_df = train_boxes_df, 
+                img_size  = image_size,                
+                transforms= get_valid_transforms(img_size = image_size),
                 normalise = False, 
     )
 
