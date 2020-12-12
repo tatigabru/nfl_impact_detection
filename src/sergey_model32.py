@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import SequentialSampler
 from torchvision import transforms
 from tqdm import tqdm
-sys.path.append("../timm-efficientdet-pytorch")
+sys.path.append("../../timm-efficientdet-pytorch")
 import neptune
 from effdet import DetBenchTrain, DetBenchEval, EfficientDet, get_efficientdet_config
 from effdet.efficientdet import HeadNet

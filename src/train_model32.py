@@ -16,13 +16,14 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import SequentialSampler
 from torchvision import transforms
 from tqdm import tqdm
-sys.path.append("../timm-efficientdet-pytorch")
+sys.path.append("../../timm-efficientdet-pytorch")
+sys.path.append("../src")
+
 import neptune
 from effdet import DetBenchTrain, DetBenchEval, EfficientDet, get_efficientdet_config
 from effdet.efficientdet import HeadNet
 from typing import Optional, List, Tuple
 
-from src.helpers.metric import competition_metric, find_best_nms_threshold
 from src.helpers.model_helpers import (collate_fn, fix_seed)
 from dataset import HelmetDataset
 from get_transforms import (get_train_transforms, get_valid_transforms)
@@ -93,24 +94,6 @@ def set_lr(optimizer, new_lr):
 
 def load_weights(model, weights_file):
     model.load_state_dict(torch.load(weights_file, map_location=f'cuda:{gpu_number}'))
-
-
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
 
 
 class ModelManager():
@@ -313,7 +296,7 @@ def do_main():
     # get datasets
     train_dataset = HelmetDataset(
                 images_dir = TRAIN_DIR,   
-                image_ids = df.image.unique(),            
+                image_ids = images_train[:160],            
                 labels_df = df, 
                 img_size  = our_image_size,                
                 transforms= get_train_transforms(img_size = our_image_size),
@@ -322,7 +305,7 @@ def do_main():
 
     valid_dataset = HelmetDataset(
                 images_dir = TRAIN_DIR,   
-                image_ids = df.image.unique(),            
+                image_ids = images_val[:160],            
                 labels_df = df, 
                 img_size  = our_image_size,                
                 transforms= get_valid_transforms(img_size = our_image_size),
