@@ -63,7 +63,7 @@ if __name__ == "__main__":
     video_dir = '../../data/train'
     video_labels = pd.read_csv(META_FILE).fillna(0)
     uniq_video = video_labels.video.unique()    
-    out_dir = os.path.join(DATA_DIR, '../../data/train_images_full')
+    out_dir = '../../data/train_images_full/'
     os.makedirs(out_dir, exist_ok=True)
     for video_name in uniq_video:
         make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=False)
