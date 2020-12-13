@@ -60,7 +60,7 @@ grad_accum = effective_batch_size // batch_size
 image_size = 512
 n_epochs = 60
 factor = 0.2
-start_lr = 1e-3
+start_lr = 2e-3
 min_lr = 1e-8
 lr_patience = 2
 overall_patience = 10
@@ -142,8 +142,9 @@ class DatasetRetriever(Dataset):
 
     def load_image_and_boxes(self, index):
         image_id = self.image_ids[index]
-        print(f'{TRAIN_VIDEO}/{image_id}')
-        image = cv2.imread(f'{TRAIN_VIDEO}/{image_id}', cv2.IMREAD_COLOR).copy().astype(np.float32)
+        image_path = os.path.join(TRAIN_VIDEO, image_id)
+        print(image_path)
+        image = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
         image /= 255.0
         records = self.marking[self.marking['image_name'] == image_id]
@@ -205,12 +206,13 @@ def run_training() -> None:
     model_eval = DetBenchEval(net, config)
     model_train.to(device)
     model_eval.to(device)
+    print(f'Mode loaded, config{config}')
 
     video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
     images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
     images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
-    print('images_valid: ', len(images_valid))
-    print('images_train: ', len(images_train))
+    print('images_valid: ', len(images_valid), images_valid[:5])
+    print('images_train: ', len(images_train), images_train[:5])
 
     train_dataset = DatasetRetriever(
             image_ids=images_train[:16],

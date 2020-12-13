@@ -33,7 +33,7 @@ class Runner:
         param_optimizer = list(self.model.named_parameters())
         no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
         
-        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=config.lr)
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config.lr)
         self.scheduler = config.SchedulerClass(self.optimizer, **config.scheduler_params)
         self.log(f'Fitter prepared. Device is {self.device}')
 
