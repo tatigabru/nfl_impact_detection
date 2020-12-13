@@ -10,9 +10,8 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from albumentations.pytorch.transforms import ToTensorV2
-from sklearn.model_selection import StratifiedKFold
 from tqdm import tqdm
+import neptune
 
 
 class Runner:
@@ -33,11 +32,7 @@ class Runner:
 
         param_optimizer = list(self.model.named_parameters())
         no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-        optimizer_grouped_parameters = [
-            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.001},
-            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-        ] 
-
+        
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=config.lr)
         self.scheduler = config.SchedulerClass(self.optimizer, **config.scheduler_params)
         self.log(f'Fitter prepared. Device is {self.device}')
@@ -119,7 +114,6 @@ class Runner:
             loss, _, _ = self.model(images, boxes, labels)
             
             loss.backward()
-
             summary_loss.update(loss.detach().item(), batch_size)
 
             self.optimizer.step()

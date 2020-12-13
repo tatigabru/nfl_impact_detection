@@ -49,10 +49,8 @@ META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
 FOLDS_FILE = os.path.join(DATA_DIR, 'image_folds.csv')
 VIDEO_META = os.path.join(DATA_DIR, 'video_meta.csv')
 TRAIN_VIDEO = os.path.join(DATA_DIR, 'train_images_full')
-# Read in the image labels file
-img_labels = pd.read_csv(META_FILE)
-video_lables = pd.read()
 
+# Hyperparameters
 fold = 0
 num_workers = 2
 batch_size = 4
@@ -145,7 +143,7 @@ class DatasetRetriever(Dataset):
     def load_image_and_boxes(self, index):
         image_id = self.image_ids[index]
         #print(f'{TRAIN_ROOT_PATH}/{image_id}')
-        image = cv2.imread(f'{TRAIN_ROOT_PATH}/{image_id}', cv2.IMREAD_COLOR).copy().astype(np.float32)
+        image = cv2.imread(f'{TRAIN_VIDEO}/{image_id}', cv2.IMREAD_COLOR).copy().astype(np.float32)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
         image /= 255.0
         records = self.marking[self.marking['image_name'] == image_id]
@@ -194,9 +192,9 @@ def run_training() -> None:
                               upload_source_files=[os.path.basename(__file__), 'get_transforms.py', 'dataset.py'])
     neptune.append_tags(f'fold_{fold}')   
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
-    print(device)
+    print(f'device: {device}')
 
-    # config models fro train and validation
+    # config models for train and validation
     config = get_efficientdet_config('tf_efficientdet_d5')
     net = EfficientDet(config, pretrained_backbone=False)
     load_weights(net, '../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
@@ -205,54 +203,53 @@ def run_training() -> None:
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
     model_train = DetBenchTrain(net, config)
     model_eval = DetBenchEval(net, config)
+    model_train.to(device)
+    model_eval.to(device)
 
-    np.random.seed(0)
-    video_names = np.random.permutation(video_labels.video.unique())
-    valid_video_len = int(len(video_names)*0.2)
-    video_valid = video_names[:valid_video_len]
-    video_train = video_names[valid_video_len:]
-    images_valid = video_labels[ video_labels.video.isin(video_valid)].image_name.unique()
-    images_train = video_labels[~video_labels.video.isin(video_valid)].image_name.unique()
-        
+    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
+    images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
+    images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
+    print('images_valid: ', len(images_valid))
+    print('images_train: ', len(images_train))
+
     train_dataset = DatasetRetriever(
-            image_ids=images_train,
+            image_ids=images_train[:16],
             marking=video_labels,
-            transforms=get_train_transforms(),
+            transforms=get_train_transforms(image_size),
             test=False,
             )
 
     validation_dataset = DatasetRetriever(
-        image_ids=images_valid,
+        image_ids=images_valid[:16],
         marking=video_labels,
-        transforms=get_valid_transforms(),
+        transforms=get_valid_transforms(image_size),
         test=True,
-    )
-
-
-
-
-def run_training():
-    device = torch.device('cuda:0')
-    net.to(device)
-
+        )
+    
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=TrainGlobalConfig.batch_size,
+        batch_size=batch_size,
         sampler=RandomSampler(train_dataset),
         pin_memory=False,
         drop_last=True,
-        num_workers=TrainGlobalConfig.num_workers,
+        num_workers=num_workers,
         collate_fn=collate_fn,
     )
     val_loader = torch.utils.data.DataLoader(
         validation_dataset, 
-        batch_size=TrainGlobalConfig.batch_size,
-        num_workers=TrainGlobalConfig.num_workers,
+        batch_size=batch_size,
+        num_workers=num_workers,
         shuffle=False,
         sampler=SequentialSampler(validation_dataset),
         pin_memory=False,
         collate_fn=collate_fn,
     )
 
-    fitter = Fitter(model=net, device=device, config=TrainGlobalConfig)
+    fitter = Runner(model=model_train, device=device, config=TrainGlobalConfig)
     fitter.fit(train_loader, val_loader)
+
+    neptune.stop()
+
+
+if __name__ == "__main__":
+    run_training()
