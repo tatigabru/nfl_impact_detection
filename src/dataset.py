@@ -57,30 +57,45 @@ class HelmetDataset(Dataset):
         image, boxes = load_image_boxes(self.images_dir, image_id, self.labels)        
         # use only one class: helmet
         labels = np.full((boxes.shape[0],), 1)        
+        
         if self.transforms:
-            sample = self.transforms(**{
+            for i in range(10):
+                sample = self.transforms(**{
                     'image': image,
                     'bboxes': boxes,
                     'labels': labels
                 })
-            image = sample['image']
-            boxes = np.array(sample['bboxes'])                                
+                if n_boxes == 0:
+                    # just change image
+                    image = sample['image']
+                    boxes = np.zeros((0, 4), dtype=int)
+                else:
+                    if len(sample['bboxes']) == 0:
+                        # try another augmentation
+                        #print('try another augmentation')
+                        continue
+                    image = sample['image']
+                    boxes = np.array(sample['bboxes'])
+                break
+            if n_boxes > 0:
+                assert len(boxes) > 0
+
+        # to tensors
+        # https://github.com/rwightman/efficientdet-pytorch/blob/814bb96c90a616a20424d928b201969578047b4d/data/dataset.py#L77
+        boxes[:, [0, 1, 2, 3]] = boxes[:, [1, 0, 3, 2]]
+        boxes = torch.as_tensor(boxes, dtype=torch.float)
+        labels = torch.as_tensor(labels, dtype=torch.float)
+        
+        target = {}
+        target['boxes'] = boxes
+        target['labels'] = labels
+        target['image_id'] = torch.tensor([index])                                
 
         if self.normalise:
             image = normalize(image)
         else:
             image = image.astype(np.float32)/255
-
-        # to tensors
-        # https://github.com/rwightman/efficientdet-pytorch/blob/814bb96c90a616a20424d928b201969578047b4d/data/dataset.py#L77
-        boxes[:, [0, 1, 2, 3]] = boxes[:, [1, 0, 3, 2]] # yxyx -- scecially for effdet
-        boxes = torch.as_tensor(boxes, dtype=torch.float)
-        labels = torch.as_tensor(labels, dtype=torch.float)
-
-        target = {}
-        target['boxes'] = boxes
-        target['labels'] = labels
-        target['image_id'] = torch.tensor([index])
+        
         # post-processing
         image = image.transpose(2,0,1).astype(np.float32) # channels first for torch
         image = torch.from_numpy(image)

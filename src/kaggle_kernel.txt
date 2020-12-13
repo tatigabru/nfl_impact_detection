@@ -14,3 +14,4 @@ from tqdm import tqdm
 # Read in the image labels file
 img_labels = pd.read_csv('/kaggle/input/nfl-impact-detection/image_labels.csv')
 img_labels.head()
+
