@@ -114,27 +114,40 @@ class DatasetRetriever(Dataset):
         self.test = test
 
     def __getitem__(self, index: int):
-        image_id = self.image_ids[index]
-        
+        image_id = self.image_ids[index]        
         image, boxes, labels = self.load_image_and_boxes(index)
         
-        target = {}
-        target['boxes'] = boxes
-        target['labels'] = torch.tensor(labels)
-        target['image_id'] = torch.tensor([index])
-
+        # use only one class: helmet
+        labels = np.full((boxes.shape[0],), 1) 
+        
         if self.transforms:
             for i in range(10):
                 sample = self.transforms(**{
                     'image': image,
-                    'bboxes': target['boxes'],
+                    'bboxes': boxes,
                     'labels': labels
                 })
                 if len(sample['bboxes']) > 0:
                     image = sample['image']
-                    target['boxes'] = torch.stack(tuple(map(torch.tensor, zip(*sample['bboxes'])))).permute(1, 0)
-                    target['boxes'][:,[0,1,2,3]] = target['boxes'][:,[1,0,3,2]]  #yxyx: be warning
+                    boxes = np.array(sample['bboxes'])        
+                   # target['boxes'] = torch.stack(tuple(map(torch.tensor, zip(*sample['bboxes'])))).permute(1, 0)
+                   # target['boxes'][:,[0,1,2,3]] = target['boxes'][:,[1,0,3,2]]  #yxyx: be warning
                     break
+        # post-processing
+        # to tensors
+        # https://github.com/rwightman/efficientdet-pytorch/blob/814bb96c90a616a20424d928b201969578047b4d/data/dataset.py#L77
+        boxes[:, [0, 1, 2, 3]] = boxes[:, [1, 0, 3, 2]]
+        boxes = torch.as_tensor(boxes, dtype=torch.float)
+        labels = torch.as_tensor(labels, dtype=torch.float)
+        
+        target = {}
+        target['boxes'] = boxes
+        target['labels'] = labels
+        target['image_id'] = torch.tensor([index])
+        
+        image = image.transpose(2,0,1).astype(np.float32) # channels first for torch
+        image = torch.from_numpy(image)
+        
         return image, target, image_id
 
     def __len__(self) -> int:
