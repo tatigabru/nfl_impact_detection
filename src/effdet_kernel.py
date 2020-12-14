@@ -61,7 +61,7 @@ inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 60
+n_epochs = 100
 factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-8
@@ -156,7 +156,7 @@ class DatasetRetriever(Dataset):
     def load_image_and_boxes(self, index):
         image_id = self.image_ids[index]
         image_path = os.path.join(TRAIN_VIDEO, image_id)
-        print(image_path)
+        # print(image_path)
         image = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
         image /= 255.0

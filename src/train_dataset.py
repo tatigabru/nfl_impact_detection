@@ -82,7 +82,7 @@ class HelmetDataset(Dataset):
     def load_image_and_boxes(self, index):
         image_id = self.image_ids[index]
         image_path = os.path.join(self.images_dir, image_id)
-        print(image_path)
+        # print(image_path)
         image = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
         image /= 255.0
