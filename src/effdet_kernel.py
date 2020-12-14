@@ -50,6 +50,9 @@ FOLDS_FILE = os.path.join(DATA_DIR, 'image_folds.csv')
 VIDEO_META = os.path.join(DATA_DIR, 'video_meta.csv')
 TRAIN_VIDEO = os.path.join(DATA_DIR, 'train_images_full')
 
+DETECTION_THRESHOLD = 0.4
+DETECTOR_FILTERING_THRESHOLD = 0.3
+
 # Hyperparameters
 fold = 0
 num_workers = 2
@@ -105,21 +108,19 @@ def load_weights(model, weights_file):
 
 class DatasetRetriever(Dataset):
 
-    def __init__(self, marking, image_ids, transforms=None, test=False):
+    def __init__(self, marking, image_ids, transforms=None):
         super().__init__()
 
         self.image_ids = image_ids
         self.marking = marking
-        self.transforms = transforms
-        self.test = test
+        self.transforms = transforms        
 
     def __getitem__(self, index: int):
         image_id = self.image_ids[index]        
-        image, boxes, labels = self.load_image_and_boxes(index)
-        
+        image, boxes, labels = self.load_image_and_boxes(index) 
+
         # use only one class: helmet
-        labels = np.full((boxes.shape[0],), 1) 
-        
+        labels = np.full((boxes.shape[0],), 1)         
         if self.transforms:
             for i in range(10):
                 sample = self.transforms(**{
@@ -132,8 +133,7 @@ class DatasetRetriever(Dataset):
                     boxes = np.array(sample['bboxes'])        
                    # target['boxes'] = torch.stack(tuple(map(torch.tensor, zip(*sample['bboxes'])))).permute(1, 0)
                    # target['boxes'][:,[0,1,2,3]] = target['boxes'][:,[1,0,3,2]]  #yxyx: be warning
-                    break
-        # post-processing
+                    break        
         # to tensors
         # https://github.com/rwightman/efficientdet-pytorch/blob/814bb96c90a616a20424d928b201969578047b4d/data/dataset.py#L77
         boxes[:, [0, 1, 2, 3]] = boxes[:, [1, 0, 3, 2]]
@@ -196,7 +196,6 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
-
 def run_training() -> None:
     neptune.init('tati/nfl')
     # Create experiment with defined parameters
@@ -228,17 +227,15 @@ def run_training() -> None:
     print('images_train: ', len(images_train), images_train[:5])
 
     train_dataset = DatasetRetriever(
-            image_ids=images_train[:16],
+            image_ids=images_train[:160],
             marking=video_labels,
-            transforms=get_train_transforms(image_size),
-            test=False,
+            transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = DatasetRetriever(
-        image_ids=images_valid[:16],
+        image_ids=images_valid[:160],
         marking=video_labels,
-        transforms=get_valid_transforms(image_size),
-        test=True,
+        transforms=get_valid_transforms(image_size),        
         )
     
     train_loader = torch.utils.data.DataLoader(

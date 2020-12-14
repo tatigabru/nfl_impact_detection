@@ -5,8 +5,6 @@ import os
 import re
 
 from PIL import Image
-
-from torchvision import transforms
 import albumentations as A
 from albumentations.pytorch.transforms import ToTensorV2, ToTensor
 from typing import Tuple, List
