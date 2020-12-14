@@ -24,7 +24,7 @@ from effdet.efficientdet import HeadNet
 from typing import Optional, List, Tuple
 
 from helpers.model_helpers import (collate_fn, fix_seed)
-from dataset import HelmetDataset
+from train_dataset import HelmetDataset
 from get_transforms import (get_train_transforms, get_valid_transforms)
 
 warnings.filterwarnings('ignore')
@@ -34,9 +34,11 @@ print(torch.__version__)
 print(neptune.__version__)
 
 DATA_DIR = '../../data/'
-TRAIN_DIR = os.path.join(DATA_DIR, 'images')
+TRAIN_IMG = os.path.join(DATA_DIR, 'images')
 META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
 FOLDS_FILE = os.path.join(DATA_DIR, 'image_folds.csv')
+VIDEO_META = os.path.join(DATA_DIR, 'video_meta.csv')
+TRAIN_VIDEO = os.path.join(DATA_DIR, 'train_images_full')
 
 fold_column = 'fold'
 fold = 0
@@ -269,45 +271,47 @@ def do_main():
 
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
     print(device)
-    train_boxes_df = pd.read_csv(META_FILE)
-    train_images_df = pd.read_csv(FOLDS_FILE)
-    print('Boxes original: ', len(train_boxes_df))
-    print('Images original: ', len(train_images_df))
+    #train_boxes_df = pd.read_csv(META_FILE)
+    #train_images_df = pd.read_csv(FOLDS_FILE)
+    #print('Boxes original: ', len(train_boxes_df))
+    #print('Images original: ', len(train_images_df))
+    #images_val = train_images_df.loc[train_images_df['fold'] == fold].image.values
+    #images_train = train_images_df.loc[train_images_df['fold'] != fold].image.values 
+    #print(f'\nTrain images:{len(images_train)}, validation images {len(images_val)}')
+    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
+    images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
+    images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
+    print('images_valid: ', len(images_valid), images_valid[:5])
+    print('images_train: ', len(images_train), images_train[:5])
 
-    # config models fro train and validation
+
+    # config models for train and validation
     config = get_efficientdet_config('tf_efficientdet_d5')
     net = EfficientDet(config, pretrained_backbone=False)
     load_weights(net, '../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
-
     config.num_classes = 1
     config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
     model_train = DetBenchTrain(net, config)
     model_eval = DetBenchEval(net, config)
+    print(f'Mode loaded, config{config}')
 
     manager = ModelManager(model_train, model_eval, device)
 
-    images_val = train_images_df.loc[train_images_df['fold'] == fold].image.values
-    images_train = train_images_df.loc[train_images_df['fold'] != fold].image.values 
-    print(f'\nTrain images:{len(images_train)}, validation images {len(images_val)}')
-
+    
     # get datasets
     train_dataset = HelmetDataset(
-                images_dir = TRAIN_DIR,   
-                image_ids = images_train[:160],            
-                labels_df = train_boxes_df, 
-                img_size  = image_size,                
-                transforms= get_train_transforms(img_size = image_size),
-                normalise = False, 
+                images_dir = TRAIN_VIDEO,   
+                image_ids = images_train[:16],            
+                marking = video_labels,                               
+                transforms= get_train_transforms(image_size)                
     )   
 
     valid_dataset = HelmetDataset(
-                images_dir = TRAIN_DIR,   
-                image_ids = images_val[:160],            
-                labels_df = train_boxes_df, 
-                img_size  = image_size,                
-                transforms= get_valid_transforms(img_size = image_size),
-                normalise = False, 
+                images_dir = TRAIN_VIDEO,   
+                image_ids=images_valid[:16],
+                marking=video_labels,
+                transforms=get_valid_transforms(image_size), 
     )
 
     train_data_loader = DataLoader(
