@@ -31,8 +31,7 @@ class Runner:
         self.device = device
 
         param_optimizer = list(self.model.named_parameters())
-        no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-        
+                
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.config.lr)
         self.scheduler = config.SchedulerClass(self.optimizer, **config.scheduler_params)
         self.log(f'Fitter prepared. Device is {self.device}')
@@ -43,17 +42,20 @@ class Runner:
                 lr = self.optimizer.param_groups[0]['lr']
                 timestamp = datetime.utcnow().isoformat()
                 self.log(f'\n{timestamp}\nLR: {lr}')
+                neptune.log_metric('Lr', lr)
 
             t = time.time()
             summary_loss = self.train_one_epoch(train_loader)
 
             self.log(f'[RESULT]: Train. Epoch: {self.epoch}, summary_loss: {summary_loss.avg:.5f}, time: {(time.time() - t):.5f}')
             self.save(f'{self.base_dir}/last-checkpoint.bin')
-
+            neptune.log_metric('Train loss', summary_loss.avg)
+            
             t = time.time()
             summary_loss = self.validation(validation_loader)
 
             self.log(f'[RESULT]: Val. Epoch: {self.epoch}, summary_loss: {summary_loss.avg:.5f}, time: {(time.time() - t):.5f}')
+            neptune.log_metric('Valid loss', summary_loss.avg)
             if summary_loss.avg < self.best_summary_loss:
                 self.best_summary_loss = summary_loss.avg
                 self.model.eval()
