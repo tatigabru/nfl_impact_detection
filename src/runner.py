@@ -70,9 +70,12 @@ class Runner:
 
     def validation(self, val_loader):
         self.model.eval()
+        current_loss = 0
         summary_loss = AverageMeter()
         t = time.time()
-        for step, (images, targets, image_ids) in enumerate(val_loader):
+        tqdm_generator = tqdm(val_loader, mininterval=15)
+        tqdm_generator.set_description('Validation loss')
+        for step, (images, targets, image_ids) in enumerate(tqdm_generator):
             if self.config.verbose:
                 if step % self.config.verbose_step == 0:
                     print(
@@ -89,7 +92,13 @@ class Runner:
 
                 loss, _, _ = self.model(images, boxes, labels)
                 summary_loss.update(loss.detach().item(), batch_size)
-
+                loss_value = loss.item()
+                # Slide average
+                current_loss = (current_loss * step + loss_value) / (step + 1)
+        # validate loss        
+        print('\nValidation loss: ', current_loss)
+        neptune.log_metric('Validation loss', current_loss)
+        
         return summary_loss
 
     def train_one_epoch(self, train_loader):
