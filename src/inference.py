@@ -110,7 +110,7 @@ def make_predictions(model, images, device, score_threshold=0.5):
     box_list = []
     score_list = []
     with torch.no_grad():
-        det = model(images, torch.tensor([1]*images.shape[0]).float().to(device))
+        det = model(images, torch.tensor([1]*images.shape[0]).to(device))
         for i in range(images.shape[0]):
             boxes = det[i].detach().cpu().numpy()[:,:4]    
             scores = det[i].detach().cpu().numpy()[:,4]   
@@ -167,9 +167,8 @@ def run_inference() -> None:
             boxes = box_list[i].astype(np.int32).clip(min=0, max=511)
             scores = score_list[i]
             if len(scores) >= 1:
-                fig, ax = plt.subplots(1, 1, figsize=(16, 8))
                 sample = cv2.resize(sample , (int(1280), int(720)))
-                for box,score in zip(boxes,scores):
+                for box, score in zip(boxes,scores):
                     box[0] = box[0] * 1280 / image_size
                     box[1] = box[1] * 720 / image_size
                     box[2] = box[2] * 1280 / image_size
