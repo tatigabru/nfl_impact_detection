@@ -44,10 +44,8 @@ print(torch.__version__)
 print(neptune.__version__)
 
 DATA_DIR = '../../data/'
-TRAIN_IMG = os.path.join(DATA_DIR, 'images')
 META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
 FOLDS_FILE = os.path.join(DATA_DIR, 'image_folds.csv')
-VIDEO_META = os.path.join(DATA_DIR, 'video_meta.csv')
 TRAIN_VIDEO = os.path.join(DATA_DIR, 'train_images_full')
 
 DETECTION_THRESHOLD = 0.4
@@ -221,6 +219,7 @@ def run_training() -> None:
     print(f'Mode loaded, config{config}')
 
     video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
+    image_labels = pd.read_csv()
     images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
     images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
     print('images_valid: ', len(images_valid), images_valid[:5])
