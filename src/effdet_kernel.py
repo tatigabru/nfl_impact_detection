@@ -68,12 +68,12 @@ min_lr = 1e-8
 lr_patience = 2
 overall_patience = 10
 loss_delta = 1e-4
-gpu_number = 0
+gpu_number = 1
 
 model_name = 'effdet5'
-experiment_tag = 'run1'
-experiment_name = f'{model_name}_fold{fold}_{image_size}_{experiment_tag}'
-checkpoints_dir = f'../../checkpoints/{model_name}'
+experiment_tag = 'pad'
+experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
+checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
 
 # Define parameters
@@ -227,13 +227,13 @@ def run_training() -> None:
     print('images_train: ', len(images_train), images_train[:5])
 
     train_dataset = DatasetRetriever(
-            image_ids=images_train[:160],
+            image_ids=images_train,
             marking=video_labels,
             transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = DatasetRetriever(
-        image_ids=images_valid[:160],
+        image_ids=images_valid,
         marking=video_labels,
         transforms=get_valid_transforms(image_size),        
         )
