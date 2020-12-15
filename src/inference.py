@@ -110,7 +110,7 @@ def make_predictions(model, images, device, score_threshold=0.5):
     box_list = []
     score_list = []
     with torch.no_grad():
-        det = model(images, torch.tensor([1]*images.shape[0]).to(device))
+        det = model(images, torch.tensor([1]*images.shape[0]).float().cuda())
         for i in range(images.shape[0]):
             boxes = det[i].detach().cpu().numpy()[:,:4]    
             scores = det[i].detach().cpu().numpy()[:,4]   
