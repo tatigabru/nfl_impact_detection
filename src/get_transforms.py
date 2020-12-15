@@ -9,6 +9,15 @@ from albumentations.pytorch.transforms import ToTensorV2
 from torchvision.transforms import Compose, Normalize, ToTensor
 
 
+
+def get_test_transforms(img_size: int = 512) -> A.Compose:
+    return A.Compose([
+           # A.PadIfNeeded(min_height=1280, min_width=1280, border_mode=cv2.BORDER_CONSTANT, value=0, p=1.0),
+            A.Resize(height=img_size, width=img_size, p=1.0),
+          #  ToTensorV2(p=1.0),
+        ], p=1.0)
+
+
 def get_valid_transforms(img_size: int = 512) -> A.Compose:
     return A.Compose(
         [   A.PadIfNeeded(min_height=1280, min_width=1280, border_mode=cv2.BORDER_CONSTANT, value=0, p=1.0),

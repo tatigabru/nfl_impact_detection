@@ -30,18 +30,14 @@ from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import RandomSampler, SequentialSampler
 
-from dataset import HelmetDataset
-from runner import Runner
-from get_transforms import get_train_transforms, get_valid_transforms
+import albumentations as A
+from get_transforms import get_train_transforms, get_valid_transforms, get_test_transforms
 from helpers.model_helpers import collate_fn, fix_seed
 import warnings
 
 warnings.filterwarnings("ignore")
 
 fix_seed(1234)
-
-print(torch.__version__)
-print(neptune.__version__)
 
 DATA_DIR = '../../data/'
 SAVE_DIR = '../../output/'
@@ -57,14 +53,6 @@ batch_size = 16
 image_size = 512
 epoch = 14
 gpu_number = 0
-
-
-def get_test_transforms(img_size: int = 512) -> A.Compose:
-    return A.Compose([
-            A.PadIfNeeded(min_height=1280, min_width=1280, border_mode=cv2.BORDER_CONSTANT, value=0, p=1.0),
-            A.Resize(height=img_size, width=img_size, p=1.0),
-          #  ToTensorV2(p=1.0),
-        ], p=1.0)
 
 
 class DatasetRetriever(Dataset):
@@ -116,17 +104,16 @@ def endzone_and_sidezone(test_df):
     return test_df
 
 
-def make_predictions(images, device, score_threshold=0.5):
+def make_predictions(model, images, device, score_threshold=0.5):
     """Get bboxes predictions for a single image"""
     images = torch.stack(images).to(device).float()
     box_list = []
     score_list = []
     with torch.no_grad():
-        det = net(images, torch.tensor([1]*images.shape[0]).float().to(device))
+        det = model(images, torch.tensor([1]*images.shape[0]).float().to(device))
         for i in range(images.shape[0]):
             boxes = det[i].detach().cpu().numpy()[:,:4]    
             scores = det[i].detach().cpu().numpy()[:,4]   
-            label = det[i].detach().cpu().numpy()[:,5]
             # for higher threshold
             indexes = np.where((scores > score_threshold) )[0]
             boxes[:, 2] = boxes[:, 2] + boxes[:, 0]
@@ -174,7 +161,7 @@ def run_inference() -> None:
     # plot some predictions
     fig_num = 0
     for images, image_ids in test_loader:
-        box_list, score_list = make_predictions(images, device, score_threshold=DETECTION_THRESHOLD)
+        box_list, score_list = make_predictions(net, images, device, score_threshold=DETECTION_THRESHOLD)
         for i in range(len(images)):
             sample = images[i].permute(1,2,0).cpu().numpy()
             boxes = box_list[i].astype(np.int32).clip(min=0, max=511)
@@ -203,7 +190,7 @@ def run_inference() -> None:
     results_boxes = []
     results_scores = []
     for images, image_ids in tqdm_generator:
-        box_list, score_list = make_predictions(images, device, score_threshold=DETECTION_THRESHOLD)
+        box_list, score_list = make_predictions(net, images, device, score_threshold=DETECTION_THRESHOLD)
         for i, image in enumerate(images):
             boxes = box_list[i]
             scores = score_list[i]
