@@ -271,6 +271,7 @@ def do_main():
 
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
     print(device)
+    # images
     #train_boxes_df = pd.read_csv(META_FILE)
     #train_images_df = pd.read_csv(FOLDS_FILE)
     #print('Boxes original: ', len(train_boxes_df))
@@ -278,6 +279,7 @@ def do_main():
     #images_val = train_images_df.loc[train_images_df['fold'] == fold].image.values
     #images_train = train_images_df.loc[train_images_df['fold'] != fold].image.values 
     #print(f'\nTrain images:{len(images_train)}, validation images {len(images_val)}')
+    # videos
     video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
     images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
     images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
