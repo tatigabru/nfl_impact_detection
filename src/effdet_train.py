@@ -163,6 +163,7 @@ class DatasetRetriever(Dataset):
         boxes[:, 2] = boxes[:, 0] + boxes[:, 2]
         boxes[:, 3] = boxes[:, 1] + boxes[:, 3]
         labels = records['impact'].values
+        
         return image, boxes, labels
 
 
@@ -219,9 +220,13 @@ def run_training() -> None:
     print(f'Mode loaded, config{config}')
 
     video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
-    image_labels = pd.read_csv()
-    images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
-    images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
+    image_labels = pd.read_csv(f'{DATA_DIR}/image_meta.csv')
+    images_valid = video_labels.loc[video_labels['fold'] == fold].image.unique()
+    images_train = video_labels.loc[video_labels['fold'] != fold].image.unique()
+    print('images_valid: ', len(images_valid), images_valid[:5])
+    print('images_train: ', len(images_train), images_train[:5])
+    images_valid.extend(video_labels.loc[video_labels['fold'] == fold].image_name.unique())
+    images_train.extend(video_labels.loc[video_labels['fold'] != fold].image_name.unique())
     print('images_valid: ', len(images_valid), images_valid[:5])
     print('images_train: ', len(images_train), images_train[:5])
 
