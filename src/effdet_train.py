@@ -69,7 +69,7 @@ loss_delta = 1e-4
 gpu_number = 1
 
 model_name = 'effdet5'
-experiment_tag = 'pad'
+experiment_tag = 'run3' #no padding
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
@@ -203,6 +203,7 @@ def run_training() -> None:
                               tags=[experiment_name, experiment_tag],
                               upload_source_files=[os.path.basename(__file__), 'get_transforms.py', 'dataset.py'])
     neptune.append_tags(f'fold_{fold}')   
+    neptune.append_tags(['images', 'no padding'])  
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
     print(f'device: {device}')
 
@@ -221,24 +222,25 @@ def run_training() -> None:
 
     video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
     image_labels = pd.read_csv(f'{DATA_DIR}/image_meta.csv')
+
     images_valid = video_labels.loc[video_labels['fold'] == fold].image.unique()
     images_train = video_labels.loc[video_labels['fold'] != fold].image.unique()
     print('images_valid: ', len(images_valid), images_valid[:5])
     print('images_train: ', len(images_train), images_train[:5])
-    images_valid.extend(video_labels.loc[video_labels['fold'] == fold].image_name.unique())
-    images_train.extend(video_labels.loc[video_labels['fold'] != fold].image_name.unique())
-    print('images_valid: ', len(images_valid), images_valid[:5])
-    print('images_train: ', len(images_train), images_train[:5])
+    video_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique())
+    video_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique())
+    print('video_valid: ', len(images_valid), images_valid[:5])
+    print('video_train: ', len(images_train), images_train[:5])
 
     train_dataset = DatasetRetriever(
-            image_ids=images_train,
-            marking=video_labels,
+            image_ids=images_train[:16],
+            marking=image_labels,
             transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = DatasetRetriever(
-        image_ids=images_valid,
-        marking=video_labels,
+        image_ids=images_valid[:16],
+        marking=image_labels,
         transforms=get_valid_transforms(image_size),        
         )
     
