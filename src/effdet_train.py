@@ -162,7 +162,7 @@ class DatasetRetriever(Dataset):
         boxes = records[['x', 'y', 'w', 'h']].values
         boxes[:, 2] = boxes[:, 0] + boxes[:, 2]
         boxes[:, 3] = boxes[:, 1] + boxes[:, 3]
-        labels = records['impact'].values
+        labels = 1
         
         return image, boxes, labels
 
