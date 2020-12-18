@@ -110,7 +110,7 @@ def make_predictions(model, images, device, score_threshold=0.5):
     box_list = []
     score_list = []
     with torch.no_grad():
-        det = model(images, torch.tensor([1]*images.shape[0]).float().cpu())
+        det = model(images, torch.tensor([1]*images.shape[0]).to(device).float())
         for i in range(images.shape[0]):
             boxes = det[i].detach().cpu().numpy()[:,:4]    
             scores = det[i].detach().cpu().numpy()[:,4]   
@@ -126,7 +126,6 @@ def make_predictions(model, images, device, score_threshold=0.5):
 
 def run_inference() -> None:
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
-    device = torch.device('cpu')
     print(f'device: {device}')
 
     checkpoint_path = '../../checkpoints/effdet5_fold_0_512_run1/best-checkpoint-014epoch.bin'
