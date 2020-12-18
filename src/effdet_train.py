@@ -220,27 +220,23 @@ def run_training() -> None:
     model_eval.to(device)
     print(f'Mode loaded, config{config}')
 
-    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
+    video_labels = pd.read_csv(f'{DATA_DIR}/all_meta.csv')
     image_labels = pd.read_csv(f'{DATA_DIR}/image_meta.csv')
-
-    images_valid = video_labels.loc[video_labels['fold'] == fold].image.unique()
-    images_train = video_labels.loc[video_labels['fold'] != fold].image.unique()
-    print('images_valid: ', len(images_valid), images_valid[:5])
-    print('images_train: ', len(images_train), images_train[:5])
-    video_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
-    video_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
+    
+    images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
+    images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
     print('video_valid: ', len(images_valid), images_valid[:5])
     print('video_train: ', len(images_train), images_train[:5])
 
     train_dataset = DatasetRetriever(
             image_ids=images_train[:16],
-            marking=image_labels,
+            marking=video_labels,
             transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = DatasetRetriever(
         image_ids=images_valid[:16],
-        marking=image_labels,
+        marking=video_labels,
         transforms=get_valid_transforms(image_size),        
         )
     
