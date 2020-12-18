@@ -229,13 +229,13 @@ def run_training() -> None:
     print('video_train: ', len(images_train), images_train[:5])
 
     train_dataset = DatasetRetriever(
-            image_ids=images_train[:16],
+            image_ids=images_train,
             marking=video_labels,
             transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = DatasetRetriever(
-        image_ids=images_valid[:16],
+        image_ids=images_valid,
         marking=video_labels,
         transforms=get_valid_transforms(image_size),        
         )
