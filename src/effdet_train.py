@@ -227,8 +227,8 @@ def run_training() -> None:
     images_train = video_labels.loc[video_labels['fold'] != fold].image.unique()
     print('images_valid: ', len(images_valid), images_valid[:5])
     print('images_train: ', len(images_train), images_train[:5])
-    video_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique())
-    video_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique())
+    video_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
+    video_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
     print('video_valid: ', len(images_valid), images_valid[:5])
     print('video_train: ', len(images_train), images_train[:5])
 
