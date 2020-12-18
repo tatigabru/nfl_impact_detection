@@ -59,12 +59,12 @@ inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 100
+n_epochs = 30
 factor = 0.2
 start_lr = 2e-3
-min_lr = 1e-8
+min_lr = 1e-7
 lr_patience = 2
-overall_patience = 10
+overall_patience = 5
 loss_delta = 1e-4
 gpu_number = 1
 
