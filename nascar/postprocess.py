@@ -66,6 +66,7 @@ def apply_thresh(df, thresh):
 
 
 def apply_linear_thresh(preddf, b=0.3, k=0):
+
     def calc_linear_thresh(frame):
         thresh = max(k * frame + b, 0)
         return thresh
@@ -79,7 +80,7 @@ def keep_box_overlaps(df):
     keep_idxs = []
     videos = df['video'].unique()
     df = add_bottom_right(df)
-    #df = pad_boxes(df, alpha=0.2)
+    #df = pad_boxes(df, alpha=-0.2)
     for video in videos:
         videodf = df[df['video'] == video]
         frames = videodf['frame'].unique()
@@ -154,6 +155,31 @@ def keep_maximums(df):
     return df
 
 
+def keep_median_frame(df):
+    # track boxes across frames and keep only 'middle prediction'
+    df = add_tracking(df, dist=2, iou_thresh=0.5)
+    keepdf = df.groupby(['video', 'track']).median()['frame'].reset_index()
+    df = df.merge(keepdf, on=['video', 'track', 'frame'])
+    return df
+
+
+def keep_weighted_mean_frame(df):
+    df = add_tracking(df, dist=2, iou_thresh=0.25)
+    df['mult'] = df.frame * df.scores
+    keepdf = df.groupby(['video', 'track']).apply(lambda x: x.mult.sum()/x.scores.sum()).reset_index().rename(columns={0: 'frame'})
+    keepdf['frame'] = keepdf['frame'].astype(int)
+    print(keepdf)
+    df = df.merge(keepdf, on=['video', 'track', 'frame'])
+    return df
+
+
+def keep_mean_frame(df):
+    df = add_tracking(df, dist=2, iou_thresh=0.25)
+    keepdf = df.groupby(['video', 'track']).mean()['frame'].astype(int).reset_index()
+    df = df.merge(keepdf, on=['video', 'track', 'frame'])
+    return df
+
+
 def both_views_strict_filter(test_df):
     # strict filter from public kernel
     dropIDX = []
@@ -171,6 +197,7 @@ def both_views_strict_filter(test_df):
     test_df = test_df.drop(index=dropIDX).reset_index(drop=True)
     return test_df
 
+
 def split_views(df):
     df_sideline = df[df['view'] == 'Sideline']
     df_endzone = df[df['view'] == 'Endzone']
@@ -187,8 +214,8 @@ if __name__ == '__main__':
     print(len(gtdf))
     preddf = pd.read_csv(project_fp + 'data/pred/public_kernel_impact_validation.csv')
     preddf = apply_thresh(preddf, 0.3)
-    preddf = keep_maximums(preddf)
-    preddf = preddf[(preddf['frame'] >= 30) & (preddf['frame'] <= 70)]
+    preddf = keep_mean_frame(preddf)
+    preddf = preddf[(preddf['frame'] >= 30) & (preddf['frame'] <= 80)]
     valid_video_names = preddf['video'].unique()
     print('Number of videos for evaluation:', len(valid_video_names))
     evaluate_df(gtdf, preddf, impact=True) #, video_names=valid_video_names)
