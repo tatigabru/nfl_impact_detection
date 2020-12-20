@@ -182,7 +182,7 @@ class SampleDataset(Dataset):
                     'bboxes': boxes,
                     'labels': labels
                 })
-                if n_boxes == 0:
+                if len(sample['bboxes']) == 0:
                     # just change image
                     image = sample['image']
                     boxes = np.zeros((0, 4), dtype=int)
@@ -194,7 +194,7 @@ class SampleDataset(Dataset):
                     image = sample['image']
                     boxes = np.array(sample['bboxes'])
                 break
-            if n_boxes > 0:
+            if len(sample['bboxes']) > 0:
                 assert len(boxes) > 0
 
         # to tensors

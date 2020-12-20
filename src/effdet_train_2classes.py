@@ -30,7 +30,7 @@ from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import RandomSampler, SequentialSampler
 
-from dataset import HelmetDataset
+from dataset import HelmetDataset, Helmet_2class_Dataset
 from runner import Runner
 from get_transforms import get_train_transforms, get_valid_transforms
 from helpers.model_helpers import collate_fn, fix_seed
@@ -64,10 +64,10 @@ min_lr = 1e-7
 lr_patience = 2
 overall_patience = 5
 loss_delta = 1e-4
-gpu_number = 0
+gpu_number = 1
 
 model_name = 'effdet5'
-experiment_tag = 'run4'
+experiment_tag = 'run5' # classes, no pretrain
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
