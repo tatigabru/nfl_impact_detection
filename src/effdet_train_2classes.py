@@ -59,7 +59,7 @@ inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 30
+n_epochs = 60
 factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-7
@@ -220,21 +220,21 @@ def run_training() -> None:
     model_eval.to(device)
     print(f'Mode loaded, config{config}')
 
-    video_labels = pd.read_csv(f'{DATA_DIR}/all_meta.csv')      
+    video_labels = pd.read_csv(f'{DATA_DIR}/all_meta.csv')
+    image_labels = pd.read_csv(f'{DATA_DIR}/image_meta.csv')
+    
     images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
     images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
     print('video_valid: ', len(images_valid), images_valid[:5])
     print('video_train: ', len(images_train), images_train[:5])
 
-    train_dataset = HelmetDataset(
-            images_dir = TRAIN_VIDEO,   
+    train_dataset = DatasetRetriever(
             image_ids=images_train,
             marking=video_labels,
             transforms=get_train_transforms(image_size),            
             )
 
-    validation_dataset = HelmetDataset(
-        images_dir = TRAIN_VIDEO,
+    validation_dataset = DatasetRetriever(
         image_ids=images_valid,
         marking=video_labels,
         transforms=get_valid_transforms(image_size),        
