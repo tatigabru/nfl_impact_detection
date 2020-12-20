@@ -92,7 +92,7 @@ PARAMS = {'fold' : fold,
          }
 
 
-def load_weights(model: nn.Module, weights_file):
+def load_weights(model: nn.Module, weights_file: str, gpu_number: int):
     model.load_state_dict(torch.load(weights_file, map_location=f'cuda:{gpu_number}'))
 
 
@@ -216,7 +216,7 @@ def run_training() -> None:
     config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
     weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin'    
-    checkpoint = torch.load(weights_path)
+    checkpoint = torch.load(weights_path, map_location=f'cuda:{gpu_number}')
     transfer_weights(model = net, model_state_dict = checkpoint['model_state_dict'])
     #net.load_state_dict(checkpoint['model_state_dict'])    
     print(f'Weights loaded from: {weights_path}')
