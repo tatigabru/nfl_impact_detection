@@ -8,7 +8,7 @@ import sys
 import time
 from datetime import datetime
 from glob import glob
-
+import collections
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,9 +19,10 @@ sys.path.append("../../timm-efficientdet-pytorch")
 sys.path.append("../../omegaconf")
 
 from typing import List, Optional, Tuple
-
+#from pytorch_toolbelt.utils.torch_utils import transfer_weights
 import neptune
 import torch
+import nn
 from albumentations.pytorch.transforms import ToTensorV2
 from effdet import (DetBenchEval, DetBenchTrain, EfficientDet,
                     get_efficientdet_config)
@@ -57,7 +58,7 @@ inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 50
+n_epochs = 2
 factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-8
@@ -67,7 +68,7 @@ loss_delta = 1e-4
 gpu_number = 1
 
 model_name = 'effdet5'
-experiment_tag = '2classes_run4' # classes, no pretrain
+experiment_tag = '2classes_test' # classes, no pretrain
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
@@ -90,16 +91,25 @@ PARAMS = {'fold' : fold,
           'checkpoints_dir': checkpoints_dir,            
          }
 
-def get_lr(optimizer ):
-    for param_group in optimizer.param_groups:
-        return param_group['lr']
 
-def set_lr(optimizer, new_lr):
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = new_lr
-
-def load_weights(model, weights_file):
+def load_weights(model: nn.Module, weights_file):
     model.load_state_dict(torch.load(weights_file, map_location=f'cuda:{gpu_number}'))
+
+
+def transfer_weights(model: nn.Module, model_state_dict: collections.OrderedDict):
+    """
+    Copy weights from state dict to model, skipping layers that are incompatible.
+    This method is helpful if you are doing some model surgery and want to load
+    part of the model weights into different model.
+    :param model: Model to load weights into
+    :param model_state_dict: Model state dict to load weights from
+    :return: None
+    """
+    for name, value in model_state_dict.items():
+        try:
+            model.load_state_dict(collections.OrderedDict([(name, value)]), strict=False)
+        except Exception as e:
+            print(e)
 
 
 class DatasetRetriever(Dataset):
@@ -201,14 +211,15 @@ def run_training() -> None:
     # config models for train and validation
     config = get_efficientdet_config('tf_efficientdet_d5')
     net = EfficientDet(config, pretrained_backbone=False)
-    load_weights(net, '../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
+    # load_weights(net, '../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
     config.num_classes = 2
     config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
-    #weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin'    
-    #checkpoint = torch.load(weights_path)
+    weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin'    
+    checkpoint = torch.load(weights_path)
+    transfer_weights(model = net, model_state_dict = checkpoint['model_state_dict'])
     #net.load_state_dict(checkpoint['model_state_dict'])    
-    #print(f'Weigths loaded from: {weights_path}')
+    print(f'Weights loaded from: {weights_path}')
     
     model_train = DetBenchTrain(net, config)
     model_eval = DetBenchEval(net, config)
@@ -223,13 +234,13 @@ def run_training() -> None:
     print('video_train: ', len(images_train), images_train[:5])
 
     train_dataset = DatasetRetriever(        
-            image_ids=images_train,
+            image_ids=images_train[:16],
             marking=video_labels,
             transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = DatasetRetriever(
-        image_ids=images_valid,
+        image_ids=images_valid[:16],
         marking=video_labels,
         transforms=get_valid_transforms(image_size),        
         )
