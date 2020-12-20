@@ -64,10 +64,10 @@ min_lr = 1e-7
 lr_patience = 2
 overall_patience = 5
 loss_delta = 1e-4
-gpu_number = 1
+gpu_number = 0
 
 model_name = 'effdet5'
-experiment_tag = 'run3' #no padding
+experiment_tag = 'test'
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
@@ -201,8 +201,12 @@ def run_training() -> None:
     # config models for train and validation
     config = get_efficientdet_config('tf_efficientdet_d5')
     net = EfficientDet(config, pretrained_backbone=False)
-    load_weights(net, '../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
-    config.num_classes = 1
+    weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin'    
+   # checkpoint = torch.load(weights_path)
+   # net.load_state_dict(checkpoint)
+    load_weights(net, weights_path)
+    print(f'Weigths loaded from: {weights_path}')
+    config.num_classes = 2
     config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
     model_train = DetBenchTrain(net, config)
