@@ -202,9 +202,9 @@ def run_training() -> None:
     config = get_efficientdet_config('tf_efficientdet_d5')
     net = EfficientDet(config, pretrained_backbone=False)
     weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin'    
-   # checkpoint = torch.load(weights_path)
-   # net.load_state_dict(checkpoint)
-    load_weights(net, weights_path)
+    checkpoint = torch.load(weights_path)
+    net.load_state_dict(checkpoint)
+    #load_weights(net, weights_path)
     print(f'Weigths loaded from: {weights_path}')
     config.num_classes = 2
     config.image_size = image_size
