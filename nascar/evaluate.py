@@ -146,7 +146,7 @@ def evaluate_df(gtdf, preddf, video_names=None, impact=True, iou_thresh=0.35):
     gtdf = gtdf[gtdf['video'].isin(video_names)]
     preddf = preddf[preddf['video'].isin(video_names)]
     print('Number of ground truth labels:', len(gtdf))
-    print('Number of ground predicted labels:', len(preddf))
+    print('Number of predicted labels:', len(preddf))
     gtdf = add_bottom_right(gtdf)
     preddf = add_bottom_right(preddf)
     if impact:
@@ -168,7 +168,7 @@ if __name__ == '__main__':
     print(len(train_labels))
     gtdf = train_labels#.query("impact == 1 and visibility > 0 and confidence > 1")
     print(len(gtdf))
-    preddf = pd.read_csv(project_fp + 'data/pred/tati_run1_fold0_all_boxes_14ep.csv')
+    preddf = pd.read_csv(project_fp + 'data/pred/run1_last_checkpoint_tati.csv')
     print(len(preddf))
     preddf = preddf[preddf['scores'] > 0.3]
     print(len(preddf))

@@ -65,6 +65,15 @@ def apply_thresh(df, thresh):
     return df
 
 
+def apply_custom_thresh(df):
+    df['thresh'] = 1
+    df.loc[(df.frame >= 30) & (df.frame < 40), 'thresh'] = 0.3
+    df.loc[(df.frame >= 40) & (df.frame < 60), 'thresh'] = 0.3
+    df.loc[(df.frame >= 60) & (df.frame <= 80), 'thresh'] = 0.3
+    df = df[df['scores'] > df['thresh']]
+    return df
+
+
 def apply_linear_thresh(preddf, b=0.3, k=0):
 
     def calc_linear_thresh(frame):
@@ -137,6 +146,7 @@ def track_boxes(videodf, dist=1, iou_thresh=0.8):
 
 def add_tracking(df, dist=1, iou_thresh=0.8):
     # add tracking data for boxes. each box gets track id
+    df = df.reset_index(drop=True)
     df = add_bottom_right(df)
     df['track'] = -1
     videos = df['video'].unique()
@@ -213,6 +223,8 @@ if __name__ == '__main__':
     gtdf = train_labels.query("impact == 1 and visibility > 0 and confidence > 1")
     print(len(gtdf))
     preddf = pd.read_csv(project_fp + 'data/pred/public_kernel_impact_validation.csv')
+    #preddf = pd.read_csv(project_fp + 'data/pred/tati_run1_fold0_all_boxes_14ep.csv')
+
     preddf = apply_thresh(preddf, 0.3)
     preddf = keep_mean_frame(preddf)
     preddf = preddf[(preddf['frame'] >= 30) & (preddf['frame'] <= 80)]
