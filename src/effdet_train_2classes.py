@@ -65,7 +65,7 @@ min_lr = 1e-8
 lr_patience = 2
 overall_patience = 7
 loss_delta = 1e-4
-gpu_number = 1
+gpu_number = 0
 
 model_name = 'effdet5'
 experiment_tag = '2classes_test' # classes, no pretrain
