@@ -57,17 +57,17 @@ inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 2
+n_epochs = 50
 factor = 0.2
 start_lr = 2e-3
-min_lr = 1e-7
+min_lr = 1e-8
 lr_patience = 2
-overall_patience = 5
+overall_patience = 7
 loss_delta = 1e-4
 gpu_number = 1
 
 model_name = 'effdet5'
-experiment_tag = 'run5' # classes, no pretrain
+experiment_tag = '2classes_run4' # classes, no pretrain
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
@@ -223,13 +223,13 @@ def run_training() -> None:
     print('video_train: ', len(images_train), images_train[:5])
 
     train_dataset = DatasetRetriever(        
-            image_ids=images_train[:16],
+            image_ids=images_train,
             marking=video_labels,
             transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = DatasetRetriever(
-        image_ids=images_valid[:16],
+        image_ids=images_valid,
         marking=video_labels,
         transforms=get_valid_transforms(image_size),        
         )
