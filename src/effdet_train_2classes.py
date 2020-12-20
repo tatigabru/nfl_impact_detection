@@ -22,7 +22,7 @@ from typing import List, Optional, Tuple
 #from pytorch_toolbelt.utils.torch_utils import transfer_weights
 import neptune
 import torch
-import nn
+from torch import nn
 from albumentations.pytorch.transforms import ToTensorV2
 from effdet import (DetBenchEval, DetBenchTrain, EfficientDet,
                     get_efficientdet_config)
