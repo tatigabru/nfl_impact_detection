@@ -53,7 +53,7 @@ DETECTOR_FILTERING_THRESHOLD = 0.3
 # Hyperparameters
 fold = 0
 num_workers = 2
-batch_size = 4
+batch_size = 3
 inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
@@ -225,7 +225,7 @@ def run_training() -> None:
     model_eval = DetBenchEval(net, config)
     model_train.to(device)
     model_eval.to(device)
-    print(f'Mode loaded, config{config}')
+    print(f'Mode loaded, config: {config}')
 
     video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')      
     images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
