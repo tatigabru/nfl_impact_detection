@@ -228,14 +228,14 @@ def run_training() -> None:
 
     train_dataset = HelmetDataset(
             images_dir = TRAIN_VIDEO,   
-            image_ids=images_train,
+            image_ids=images_train[:16],
             marking=video_labels,
             transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = HelmetDataset(
         images_dir = TRAIN_VIDEO,
-        image_ids=images_valid,
+        image_ids=images_valid[:16],
         marking=video_labels,
         transforms=get_valid_transforms(image_size),        
         )
