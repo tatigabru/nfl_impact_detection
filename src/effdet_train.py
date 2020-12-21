@@ -28,7 +28,7 @@ from effdet import (DetBenchEval, DetBenchTrain, EfficientDet,
 from effdet.efficientdet import HeadNet
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Dataset
-from torch.utils.data.sampler import RandomSampler, SequentialSampler
+from torch.utils.data.sampler import RandomSampler, SequentialSampler, WeightedRandomSampler
 
 from dataset import HelmetDataset
 from runner import Runner
@@ -59,7 +59,7 @@ inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 50
+n_epochs = 2
 factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-7
@@ -156,7 +156,7 @@ def run_training() -> None:
             images_dir = TRAIN_VIDEO,   
             image_ids=images_train[:16],
             marking=video_labels,
-            transforms=get_train_transforms(image_size),            
+            transforms=get_hard_transforms(image_size),            
             )
 
     validation_dataset = HelmetDataset(
