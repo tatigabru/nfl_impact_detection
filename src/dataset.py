@@ -79,7 +79,6 @@ class HelmetDataset(Dataset):
         return image, boxes
 
 
-
 class Helmet_2class_Dataset(Dataset):
 
     def __init__(self, images_dir, marking, image_ids, transforms=None, test=False):
@@ -137,6 +136,31 @@ class Helmet_2class_Dataset(Dataset):
         return image, boxes, labels
 
 
+class TestHelmetDataset(Dataset):
+    def __init__(self, images_dir, image_ids, transforms=None):
+        super().__init__()
+        self.images_dir = images_dir
+        self.image_ids = image_ids
+        self.transforms = transforms
+
+    def __getitem__(self, index: int):
+        image_id = self.image_ids[index]
+        image_path = os.path.join(self.images_dir, image_id)
+        image = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+        image /= 255.0
+        if self.transforms:
+            sample = {'image': image}
+            sample = self.transforms(**sample)
+            image = sample['image']
+        
+        image = image.transpose(2,0,1).astype(np.float32) # channels first for torch
+        image = torch.from_numpy(image)
+
+        return image, image_id
+
+    def __len__(self) -> int:
+        return self.image_ids.shape[0]
 
 
 class SampleDataset(Dataset):

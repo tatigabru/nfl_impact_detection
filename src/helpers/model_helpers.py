@@ -112,6 +112,6 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
-def load_weights(model: nn.Module, weights_file: str):
+def load_weights(model: nn.Module, weights_file: str) -> nn.Module:
     model.load_state_dict(torch.load(weights_file))
     return model

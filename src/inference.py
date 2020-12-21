@@ -30,6 +30,7 @@ from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import RandomSampler, SequentialSampler
 
+from dataset import TestHelmetDataset
 import albumentations as A
 from get_transforms import get_train_transforms, get_valid_transforms, get_test_transforms
 from helpers.model_helpers import collate_fn, fix_seed
@@ -55,36 +56,6 @@ epoch = 14
 gpu_number = 0
 
 
-class DatasetRetriever(Dataset):
-    def __init__(self, image_ids, transforms=None):
-        super().__init__()
-        self.image_ids = image_ids
-        self.transforms = transforms
-
-    def __getitem__(self, index: int):
-        image_id = self.image_ids[index]
-        image_path = os.path.join(TEST_IMAGES, image_id)
-        image = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
-        image /= 255.0
-        if self.transforms:
-            sample = {'image': image}
-            sample = self.transforms(**sample)
-            image = sample['image']
-        
-        image = image.transpose(2,0,1).astype(np.float32) # channels first for torch
-        image = torch.from_numpy(image)
-
-        return image, image_id
-
-    def __len__(self) -> int:
-        return self.image_ids.shape[0]
-
-
-def collate_fn(batch):
-    return tuple(zip(*batch))
-
-
 def endzone_and_sidezone(test_df):
     # Remove all boxes which are not present in both Sidezone and Endzone views -- we do not do that
     dropIDX = []
@@ -104,7 +75,32 @@ def endzone_and_sidezone(test_df):
     return test_df
 
 
-def make_predictions(model, images, device, score_threshold=0.5):
+def make_predictions(net, images, score_threshold=0.5):
+    """Get bboxes predictions for a single image"""
+    images = torch.stack(images).cuda().float()
+    # images = torch.stack(images).to(device).float()
+    box_list = []
+    score_list = []
+    with torch.no_grad():
+        det = net(images, torch.tensor([1]*images.shape[0]).float().cuda())
+        # det = model(images, torch.tensor([1]*images.shape[0]).to(device).float())
+        for i in range(images.shape[0]):
+            #print(det.shape)
+            boxes = det[i].detach().cpu().numpy()[:,:4]    
+            scores = det[i].detach().cpu().numpy()[:,4]   
+            label = det[i].detach().cpu().numpy()[:,5]
+            #print(list(zip(label, scores)))
+            # using only label = 2
+            indexes = np.where((scores > score_threshold) & (label == 2))[0]
+            boxes[:, 2] = boxes[:, 2] + boxes[:, 0]
+            boxes[:, 3] = boxes[:, 3] + boxes[:, 1]
+            box_list.append(boxes[indexes])
+            score_list.append(scores[indexes])
+
+    return box_list, score_list
+
+
+def make_1class_predictions(model, images, device, score_threshold=0.5):
     """Get bboxes predictions for a single image"""
     images = torch.stack(images).to(device).float()
     box_list = []
@@ -124,27 +120,35 @@ def make_predictions(model, images, device, score_threshold=0.5):
     return box_list, score_list
 
 
-def run_inference() -> None:
-    device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
-    print(f'device: {device}')
-
-    checkpoint_path = '../../checkpoints/effdet5_fold_0_512_run1/best-checkpoint-014epoch.bin'
-    # config model and load weights
+def load_net(checkpoint_path: str, num_classes = 2, image_size = 512):
     config = get_efficientdet_config('tf_efficientdet_d5')
     net = EfficientDet(config, pretrained_backbone=False)
-    config.num_classes = 1
+    config.num_classes = num_classes
     config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
     checkpoint = torch.load(checkpoint_path)
     net.load_state_dict(checkpoint['model_state_dict'])
     net = DetBenchEval(net, config)
+    net.eval()
+    print(f'Model loaded, config: {config}')
+
+    return net
+
+
+def run_inference() -> None:
+    device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
+    print(f'device: {device}')
+    model_name = 'effdet5_fold_0_512_2classes_cont_run3_run5'
+    checkpoint_path = f'../../checkpoints/{model_name}/best-checkpoint-008epoch.bin'
+    # config model and load weights
+    net = load_net(checkpoint_path, num_classes = 2, image_size = image_size)
     net.to(device)
-    print(f'Model loaded, config{config}')
-
+    
     images = np.array(os.listdir(TEST_IMAGES))
-    print('test images: ', len(images), images[:5])
+    print('Test images: ', len(images), images[:5])
 
-    test_dataset = DatasetRetriever(
+    test_dataset = TestHelmetDataset(
+        images_dir=TEST_IMAGES,
         image_ids=images[:4],
         transforms=get_test_transforms(image_size)
     )
@@ -158,38 +162,15 @@ def run_inference() -> None:
         collate_fn=collate_fn
     )
 
-    # plot some predictions
-    fig_num = 0
-    for images, image_ids in test_loader:
-        box_list, score_list = make_predictions(net, images, device, score_threshold=DETECTION_THRESHOLD)
-        for i in range(len(images)):
-            sample = images[i].permute(1,2,0).cpu().numpy()
-            boxes = box_list[i].astype(np.int32).clip(min=0, max=511)
-            scores = score_list[i]
-            if len(scores) >= 1:
-                sample = cv2.resize(sample , (int(1280), int(720)))
-                for box, score in zip(boxes,scores):
-                    box[0] = box[0] * 1280 / image_size
-                    box[1] = box[1] * 720 / image_size
-                    box[2] = box[2] * 1280 / image_size
-                    box[3] = box[3] * 720 / image_size
-                    cv2.rectangle(sample, (box[0], box[1]), (box[2], box[3]), (1, 0, 0), 3)
-                plt.figure(fig_num, figsize=(12,6))        
-                plt.imshow(image) 
-                plt.title(image_ids[i])
-                #plt.savefig(f'{SAVE_DIR}/{image_ids[i]}_bboxes.png')
-                plt.show()
-                fig_num += 1
-        if fig_num > 5:
-            break
-
-    tqdm_generator = tqdm(test_loader, mininterval=1)
-    tqdm_generator.set_description('Test predictions')
+       
     result_image_ids = []
     results_boxes = []
     results_scores = []
+   
+    tqdm_generator = tqdm(test_loader, mininterval=1)
+    tqdm_generator.set_description('Test predictions')
     for images, image_ids in tqdm_generator:
-        box_list, score_list = make_predictions(net, images, device, score_threshold=DETECTION_THRESHOLD)
+        box_list, score_list = make_predictions(net, images, score_threshold=0.2)        
         for i, image in enumerate(images):
             boxes = box_list[i]
             scores = score_list[i]
@@ -209,11 +190,11 @@ def run_inference() -> None:
             results_boxes.append(boxes)
             results_scores.append(scores)
 
-    # save data
+    # save predictions
     box_df = pd.DataFrame(np.concatenate(results_boxes), columns=['left', 'top', 'width', 'height'])
-    test_df = pd.DataFrame({'scores':np.concatenate(results_scores), 'image_name':result_image_ids})
+    test_df = pd.DataFrame({'scores': np.concatenate(results_scores), 'image_name': result_image_ids})
     test_df = pd.concat([test_df, box_df], axis=1)
-    test_df = test_df[test_df.scores > DETECTOR_FILTERING_THRESHOLD]
+    # test_df = test_df[test_df.scores > DETECTOR_FILTERING_THRESHOLD]
     print(test_df.shape)
     #gameKey,playID,view,video,frame,left,width,top,height
     #57590,3607,Endzone,57590_003607_Endzone.mp4,1,1,1,1,1
@@ -224,7 +205,7 @@ def run_inference() -> None:
     test_df['video'] = test_df.image_name.str.rsplit('_',1).str[0] + '.mp4'
     test_df = test_df[["gameKey","playID","view","video","frame","left","width","top","height"]]
     print(test_df.head())
-    test_df.to_csv(f'{SAVE_DIR}/test_df.csv', index=False)
+    test_df.to_csv(f'{SAVE_DIR}/{model_name}_test_df.csv', index=False)
 
 
 def make_submit(test_df):

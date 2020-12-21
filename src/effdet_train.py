@@ -33,7 +33,7 @@ from torch.utils.data.sampler import RandomSampler, SequentialSampler
 from dataset import HelmetDataset
 from runner import Runner
 from get_transforms import get_train_transforms, get_valid_transforms
-from helpers.model_helpers import collate_fn, fix_seed
+from helpers.model_helpers import collate_fn, fix_seed, 
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -52,7 +52,7 @@ DETECTION_THRESHOLD = 0.4
 DETECTOR_FILTERING_THRESHOLD = 0.3
 
 # Hyperparameters
-fold = 0
+fold = 1
 num_workers = 2
 batch_size = 4
 inf_batch_size = 16
@@ -92,13 +92,6 @@ PARAMS = {'fold' : fold,
           'checkpoints_dir': checkpoints_dir,            
          }
 
-def get_lr(optimizer ):
-    for param_group in optimizer.param_groups:
-        return param_group['lr']
-
-def set_lr(optimizer, new_lr):
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = new_lr
 
 def load_weights(model, weights_file):
     model.load_state_dict(torch.load(weights_file, map_location=f'cuda:{gpu_number}'))
@@ -126,10 +119,6 @@ class TrainGlobalConfig:
         min_lr=min_lr,
         eps=1e-08
     )
-
-
-def collate_fn(batch):
-    return tuple(zip(*batch))
 
 
 def run_training() -> None:
