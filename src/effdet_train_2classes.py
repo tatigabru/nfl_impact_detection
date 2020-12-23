@@ -68,7 +68,7 @@ loss_delta = 1e-4
 gpu_number = 0
 
 model_name = 'effdet5'
-experiment_tag = '2classes_cont_run3_run5' # classes, no pretrain
+experiment_tag = '2classes_cont_run3_run9' # classes, no pretrain
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
