@@ -211,14 +211,12 @@ def run_training() -> None:
     # config models for train and validation
     config = get_efficientdet_config('tf_efficientdet_d5')
     net = EfficientDet(config, pretrained_backbone=False)
-    # load_weights(net, '../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
     config.num_classes = 2
     config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
     weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin'    
     checkpoint = torch.load(weights_path, map_location=f'cuda:{gpu_number}')
     transfer_weights(model = net, model_state_dict = checkpoint['model_state_dict'])
-    #net.load_state_dict(checkpoint['model_state_dict'])    
     print(f'Weights loaded from: {weights_path}')
     
     model_train = DetBenchTrain(net, config)
