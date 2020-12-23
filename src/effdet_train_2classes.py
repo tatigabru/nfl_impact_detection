@@ -63,7 +63,7 @@ factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-8
 lr_patience = 2
-overall_patience = 7
+overall_patience = 5
 loss_delta = 1e-4
 gpu_number = 0
 
@@ -196,6 +196,16 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
+def filter_impacts(df: pd.DataFrame) -> pd.DataFrame:
+    mask = ((df['visibility'] != 0) &
+            (df['confidence'] != 1) &
+            (df['impact'] > 0))|(df['impact'] == 0)
+    filtered = df.loc[mask]
+    print(f'filtered video images: {len(filtered)}')   
+
+    return filtered
+
+
 def run_training() -> None:
     neptune.init('tati/nfl')
     # Create experiment with defined parameters
@@ -225,7 +235,9 @@ def run_training() -> None:
     model_eval.to(device)
     print(f'Mode loaded, config: {config}')
 
-    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')      
+    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta_4.csv')  
+    video_labels = filter_impacts(video_labels) 
+
     images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
     images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
     print('video_valid: ', len(images_valid), images_valid[:5])

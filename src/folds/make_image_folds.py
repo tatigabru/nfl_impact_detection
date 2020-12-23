@@ -116,7 +116,7 @@ def do_main():
 
 
 if __name__ == "__main__":     
-    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta_4.csv')
+    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
     image_labels = pd.read_csv(f'{DATA_DIR}/image_meta.csv')
     print(len(video_labels))
 

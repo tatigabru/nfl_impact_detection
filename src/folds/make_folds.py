@@ -108,6 +108,23 @@ def propagate_impacts(df: pd.DataFrame, num_frames=3) -> pd.DataFrame:
     return dfc
 
 
+def filter_impacts(df: pd.DataFrame) -> pd.DataFrame:
+    impacts = df.loc[df['impact'] > 0]
+    print(f'all impacts images: {len(impacts)}')
+    print(impacts.visibility.value_counts())
+    print(impacts.confidence.value_counts())
+    print(impacts.impact.value_counts())
+
+    mask = ((df['visibility'] != 0) &
+            (df['confidence'] != 1) &
+            (df['impact'] > 0))|(df['impact'] == 0)
+    filtered = df.loc[mask]
+    print(f'filtered video images: {len(filtered)}')   
+
+    return filtered
+
+
+
 def preprocess_video_meta(video_labels: pd.DataFrame, save_dir: Optional[str] = None) -> pd.DataFrame:
     """Helper to preprocess video meta file
     Adapted from: https://www.kaggle.com/its7171/2class-object-detection-training
@@ -138,40 +155,41 @@ if __name__ == "__main__":
     META_FILE = os.path.join(DATA_DIR, 'train_labels.csv')
     df = pd.read_csv(META_FILE).fillna(0)
     df = fix_errors(df)
-    print(len(df))
-
+    df = filter_impacts(df)
+    print(f'all video images: {len(df)}')
     # create video folds
     # df_folds = create_folds(video_labels, nb_folds=4, save_dir=DATA_DIR)
     FOLDS_FILE = os.path.join(DATA_DIR, 'video_folds.csv')
     video_folds = pd.read_csv(FOLDS_FILE)
     print(len(video_folds))
 
-    video_labels = propagate_impacts(df, num_frames=1)
-    video_labels['image_name'] = video_labels['video'].str.replace('.mp4', '') + '_' + video_labels['frame'].astype(str) + '.png'
+    #video_labels = propagate_impacts(df, num_frames=3)
+    #video_labels['image_name'] = video_labels['video'].str.replace('.mp4', '') + '_' + video_labels['frame'].astype(str) + '.png'
     # video_labels = video_labels[video_labels.groupby('image_name')['impact'].transform("sum") > 0].reset_index(drop=True)
-    video_labels['impact'] = video_labels['impact'].astype(int)+1
-    video_labels['x'] = video_labels['left']
-    video_labels['y'] = video_labels['top']
-    video_labels['w'] = video_labels['width']
-    video_labels['h'] = video_labels['height']
-    print(video_labels.head())
-    video_labels.to_csv(f'{DATA_DIR}/video_meta_1.csv', index=False)
+    #video_labels['impact'] = video_labels['impact'].astype(int)+1
+    #video_labels['x'] = video_labels['left']
+    #video_labels['y'] = video_labels['top']
+    #video_labels['w'] = video_labels['width']
+    #video_labels['h'] = video_labels['height']
+    #print(video_labels.head())
+    #video_labels.to_csv(f'{DATA_DIR}/video_meta_3.csv', index=False)
 
     #video_labels = preprocess_video_meta(df, save_dir=DATA_DIR)
-    video_labels = pd.read_csv(os.path.join(DATA_DIR, 'video_meta_1.csv'))
+    video_labels = pd.read_csv(os.path.join(DATA_DIR, 'video_meta_3.csv'))
     print(len(video_labels))
     # print(video_labels.head())
-    video_id = [s[:12] for s in video_labels['video'].values]
-    video_labels['video_id'] = video_id
-    print(video_labels.head())
+    #video_id = [s[:12] for s in video_labels['video'].values]
+    #video_labels['video_id'] = video_id
+    #print(video_labels.head())
     
-    video_labels['fold'] = -1 
-    for index, row in video_folds.iterrows():
-        #print(row['video'], row['fold'])
-        video_labels.loc[video_labels['video_id'] == row['video'], 'fold'] = row['fold']
+    #video_labels['fold'] = -1 
+    #for index, row in video_folds.iterrows():        
+        #video_labels.loc[video_labels['video_id'] == row['video'], 'fold'] = row['fold']
     
-    video_labels.to_csv(f'{DATA_DIR}/video_meta_1.csv', index=False)
-    print(len(video_labels))
+    #video_labels.to_csv(f'{DATA_DIR}/video_meta_3.csv', index=False)
+    #print(len(video_labels))
+
+    
 
    # META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
    # FOLDS_FILE = os.path.join(DATA_DIR, 'image_folds.csv')

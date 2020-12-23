@@ -33,7 +33,7 @@ from torch.utils.data.sampler import RandomSampler, SequentialSampler, WeightedR
 from dataset import HelmetDataset
 from runner import Runner
 from get_transforms import get_train_transforms, get_valid_transforms, get_hard_transforms
-from helpers.model_helpers import collate_fn, fix_seed 
+from helpers.model_helpers import collate_fn, fix_seed, transfer_weights, load_weights 
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -52,24 +52,24 @@ DETECTION_THRESHOLD = 0.4
 DETECTOR_FILTERING_THRESHOLD = 0.3
 
 # Hyperparameters
-fold = 2
+fold = 0
 num_workers = 2
 batch_size = 4
 inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 50
+n_epochs = 15
 factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-8
-lr_patience = 2
-overall_patience = 7
+lr_patience = 1
+overall_patience = 5
 loss_delta = 1e-4
-gpu_number = 0
+gpu_number = 1
 
 model_name = 'effdet5'
-experiment_tag = 'hard_augs_run7' #no padding
+experiment_tag = 'cont_run3_run8' #no padding
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
@@ -91,10 +91,6 @@ PARAMS = {'fold' : fold,
           'experiment_tag': experiment_tag, 
           'checkpoints_dir': checkpoints_dir,            
          }
-
-
-def load_weights(model, weights_file):
-    model.load_state_dict(torch.load(weights_file, map_location=f'cuda:{gpu_number}'))
 
 
 class TrainGlobalConfig:
@@ -129,24 +125,29 @@ def run_training() -> None:
                               tags=[experiment_name, experiment_tag],
                               upload_source_files=[os.path.basename(__file__), 'get_transforms.py', 'dataset.py'])
     neptune.append_tags(f'fold_{fold}')   
-    neptune.append_tags(['images', 'no padding'])  
+    neptune.append_tags(['all video and images', 'no padding'])  
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
     print(f'device: {device}')
 
     # config models for train and validation
     config = get_efficientdet_config('tf_efficientdet_d5')
     net = EfficientDet(config, pretrained_backbone=False)
-    load_weights(net, '../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
+    # load_weights(net, '../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
     config.num_classes = 1
     config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
+    weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin'    
+    checkpoint = torch.load(weights_path, map_location=f'cuda:{gpu_number}')
+    transfer_weights(model = net, model_state_dict = checkpoint['model_state_dict'])
+    print(f'Weights loaded from: {weights_path}')
+
     model_train = DetBenchTrain(net, config)
     model_eval = DetBenchEval(net, config)
     model_train.to(device)
     model_eval.to(device)
     print(f'Mode loaded, config{config}')
 
-    video_labels = pd.read_csv(f'{DATA_DIR}/all_meta.csv')      
+    video_labels = pd.read_csv(f'{DATA_DIR}/all_meta2.csv')      
     images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
     images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
     print('video_valid: ', len(images_valid), images_valid[:5])
@@ -156,7 +157,7 @@ def run_training() -> None:
             images_dir = TRAIN_VIDEO,   
             image_ids=images_train,
             marking=video_labels,
-            transforms=get_hard_transforms(image_size),            
+            transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = HelmetDataset(

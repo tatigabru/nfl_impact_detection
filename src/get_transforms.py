@@ -60,8 +60,8 @@ def get_hard_transforms(img_size: int = 512) -> A.Compose:
     noise_augs = [A.MotionBlur(), A.GaussianBlur()]
     augmentations = [
         A.RandomSizedCrop(min_max_height=(500, 720), height=img_size, width=img_size, p=0.5),
-        A.RandomRotate90(p=1),
-        A.Transpose(p=0.5),
+        #A.RandomRotate90(p=1),
+        #A.Transpose(p=0.5),
         A.HorizontalFlip(p=0.5),
         # Small color changes
          A.OneOf([
