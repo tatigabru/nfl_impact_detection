@@ -58,23 +58,20 @@ def get_train_transforms(img_size: int = 512) -> A.Compose:
 
 def get_hard_transforms(img_size: int = 512) -> A.Compose:
     noise_augs = [A.MotionBlur(), A.GaussianBlur()]
-    color_augs = [A.HueSaturationValue(), A.Posterize(), A.ToGray(), A.ToSepia()]
     augmentations = [
         A.RandomSizedCrop(min_max_height=(500, 720), height=img_size, width=img_size, p=0.5),
         A.RandomRotate90(p=1),
         A.Transpose(p=0.5),
         A.HorizontalFlip(p=0.5),
         # Small color changes
-        A.OneOf(
-            [
-                A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2),
-                A.RandomGamma(),
-                A.CLAHE(),
-            ]
-        ),
+         A.OneOf([
+            A.HueSaturationValue(hue_shift_limit=0.1, sat_shift_limit=0.2,
+                                 val_shift_limit=0.1, p=0.9),
+            A.RandomBrightnessContrast(brightness_limit=0.1,
+                                       contrast_limit=0.1, p=0.9),
+        ], p=0.9),
         # More color changes
         A.OneOf(noise_augs),
-        A.OneOf(color_augs),
         # Some affine
         A.OneOf(
             [

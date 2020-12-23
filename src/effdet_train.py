@@ -32,8 +32,8 @@ from torch.utils.data.sampler import RandomSampler, SequentialSampler, WeightedR
 
 from dataset import HelmetDataset
 from runner import Runner
-from get_transforms import get_train_transforms, get_valid_transforms
-from helpers.model_helpers import collate_fn, fix_seed, 
+from get_transforms import get_train_transforms, get_valid_transforms, get_hard_transforms
+from helpers.model_helpers import collate_fn, fix_seed 
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -52,24 +52,24 @@ DETECTION_THRESHOLD = 0.4
 DETECTOR_FILTERING_THRESHOLD = 0.3
 
 # Hyperparameters
-fold = 1
+fold = 2
 num_workers = 2
 batch_size = 4
 inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 2
+n_epochs = 50
 factor = 0.2
 start_lr = 2e-3
-min_lr = 1e-7
+min_lr = 1e-8
 lr_patience = 2
-overall_patience = 10
+overall_patience = 7
 loss_delta = 1e-4
-gpu_number = 1
+gpu_number = 0
 
 model_name = 'effdet5'
-experiment_tag = 'test' #no padding
+experiment_tag = 'hard_augs_run7' #no padding
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
@@ -154,14 +154,14 @@ def run_training() -> None:
 
     train_dataset = HelmetDataset(
             images_dir = TRAIN_VIDEO,   
-            image_ids=images_train[:16],
+            image_ids=images_train,
             marking=video_labels,
             transforms=get_hard_transforms(image_size),            
             )
 
     validation_dataset = HelmetDataset(
         images_dir = TRAIN_VIDEO,
-        image_ids=images_valid[:16],
+        image_ids=images_valid,
         marking=video_labels,
         transforms=get_valid_transforms(image_size),        
         )
