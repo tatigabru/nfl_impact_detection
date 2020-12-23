@@ -62,13 +62,13 @@ n_epochs = 30
 factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-8
-lr_patience = 2
+lr_patience = 1
 overall_patience = 5
 loss_delta = 1e-4
 gpu_number = 0
 
 model_name = 'effdet5'
-experiment_tag = '2classes_cont_run3_run9' # classes, no pretrain
+experiment_tag = '2classes_cont_run5_run9' # classes, no pretrain
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
@@ -214,7 +214,7 @@ def run_training() -> None:
                               tags=[experiment_name, experiment_tag],
                               upload_source_files=[os.path.basename(__file__), 'get_transforms.py', 'dataset.py'])
     neptune.append_tags(f'fold_{fold}')   
-    neptune.append_tags(['images', 'no padding'])  
+    neptune.append_tags(['images', 'no padding', 'video_meta_4', 'filtered_impacts'])  
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
     print(f'device: {device}')
 
@@ -224,7 +224,8 @@ def run_training() -> None:
     config.num_classes = 2
     config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
-    weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin'    
+    weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin' 
+    weights_path = '../../checkpoints/effdet5_fold_0_512_2classes_cont_run3_run5/best-checkpoint-008epoch.bin'   
     checkpoint = torch.load(weights_path, map_location=f'cuda:{gpu_number}')
     transfer_weights(model = net, model_state_dict = checkpoint['model_state_dict'])
     print(f'Weights loaded from: {weights_path}')
