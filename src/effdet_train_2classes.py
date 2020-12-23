@@ -58,7 +58,7 @@ inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 30
+n_epochs = 2
 factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-8
@@ -245,13 +245,13 @@ def run_training() -> None:
     print('video_train: ', len(images_train), images_train[:5])
 
     train_dataset = DatasetRetriever(        
-            image_ids=images_train,
+            image_ids=images_train[:16],
             marking=video_labels,
             transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = DatasetRetriever(
-        image_ids=images_valid,
+        image_ids=images_valid[:16],
         marking=video_labels,
         transforms=get_valid_transforms(image_size),        
         )
