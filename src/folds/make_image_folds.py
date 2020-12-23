@@ -114,15 +114,15 @@ def do_main():
     print(image_labels.head())
     image_labels.to_csv(f'{DATA_DIR}/image_meta.csv', index=False)
 
-if __name__ == "__main__":    
- 
-    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
+
+if __name__ == "__main__":     
+    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta_4.csv')
     image_labels = pd.read_csv(f'{DATA_DIR}/image_meta.csv')
-    print(video_labels.info)
+    print(len(video_labels))
 
     selected = ['image_name','x','y','w','h','video_id','fold']
     video = video_labels[selected]
     image = image_labels[selected]
     all_df = pd.concat([video, image])
-    print(all_df.info)
+    print(len(all_df))
     all_df.to_csv(f'{DATA_DIR}/all_meta.csv', index=False)

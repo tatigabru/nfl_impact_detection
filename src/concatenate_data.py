@@ -7,6 +7,7 @@ from multiprocessing import Pool
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from typing import List
+from tifffile import imread, imwrite
 
 
 DATA_DIR = '../../data/'
@@ -77,8 +78,9 @@ def concat_images(output_dir: str, video_id: str, images_dir: str, num: int = 5)
             else:
             # concatenate         
                 image = np.concatenate((image, gray), axis=2) 
-        image_path = f'{output_dir}/{video_id}_{frame}'
-        np.save(image_path, image)
+        image_path = f'{output_dir}/{video_id}_{frame}.tif'
+        imwrite(image_path, image, planarconfig='CONTIG')
+        #np.save(image_path, image)
         image_ids.append(video_id + '_' + str(frame) + '.png')    
         frame += num
    
@@ -127,7 +129,8 @@ if __name__ == "__main__":
     images_dir = os.path.join(DATA_DIR, 'train_images_full') 
     videos = video_labels.video.str.replace('.mp4', '').unique() 
     print('videos: ', len(videos), videos[:5])
-    
+    #video_labels.groupby(video)
+
     frame = 5
     num = 3
     for idx, i in enumerate(range(frame-num, frame+num+1)):
@@ -147,13 +150,14 @@ if __name__ == "__main__":
     plt.figure(figsize=(12,6))        
     plt.imshow(image[:, :, 0]) 
     
-    output_dir = '../../data/train_videos/'
+    output_dir = '../../data/train_concat_frames/'
     os.makedirs(output_dir, exist_ok=True)
     video = videos[2]
     image_ids = concat_images(output_dir, video, images_dir, num = 4)
     print(image_ids)
     df = make_concat_labels(video_labels, image_ids)
     print(df.head())
+    df.to_csv(f'{DATA_DIR}/concat_frames.csv', index=True)
    # for video in videos:
         #concat_images(output_dir, video, images_dir, num = 4)
   

@@ -11,29 +11,22 @@ DATA_DIR = '../../data/'
 META_FILE = os.path.join(DATA_DIR, 'train_labels.csv')
 
 
-def make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=True):
+def make_images_from_video(video_name, video_labels, video_dir, out_dir):
     """Helper to get image frames from videos"""
     video_path=f"{video_dir}/{video_name}"
     video_name = os.path.basename(video_path)
     vidcap = cv2.VideoCapture(video_path)
-    if only_with_impact:
-        boxes_all = video_labels.query("video == @video_name")
-        print(video_path, boxes_all[boxes_all.impact > 1.0].shape[0])
-    else:
-        print(video_path)
+    print(video_path)
     frame = 0
     while True:
         it_worked, img = vidcap.read()
         if not it_worked:
             break
         frame += 1
-        if only_with_impact:
-            boxes = video_labels.query("video == @video_name and frame == @frame")
-            boxes_with_impact = boxes[boxes.impact > 1.0]
-            if boxes_with_impact.shape[0] == 0:
-                continue        
         image_path = f'{out_dir}/{video_name}'.replace('.mp4',f'_{frame}.png')
-        _ = cv2.imwrite(image_path, img)
+        success = cv2.imwrite(image_path, img)
+        if not success:
+            raise ValueError("couldn't write image successfully")
     
 
 def write_frames(video_path):
@@ -66,11 +59,11 @@ if __name__ == "__main__":
     out_dir = '../../data/train_images_full/'
     os.makedirs(out_dir, exist_ok=True)
     for video_name in uniq_video:
-        make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=False)
+        make_images_from_video(video_name, video_labels, video_dir, out_dir)
    
     video_dir = '../../data/test'
     uniq_video = os.listdir(video_dir)
     out_dir = '../../data/test_images/'
     os.makedirs(out_dir, exist_ok=True)
     for video_name in uniq_video:
-        make_images_from_video(video_name, pd.DataFrame(), video_dir, out_dir, only_with_impact=False)
+        make_images_from_video(video_name, pd.DataFrame(), video_dir, out_dir)
