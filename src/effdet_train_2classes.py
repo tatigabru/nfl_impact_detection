@@ -196,16 +196,6 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
-def filter_impacts(df: pd.DataFrame) -> pd.DataFrame:
-    mask = ((df['visibility'] != 0) &
-            (df['confidence'] != 1) &
-            (df['impact'] > 0))|(df['impact'] == 0)
-    filtered = df.loc[mask]
-    print(f'filtered video images: {len(filtered)}')   
-
-    return filtered
-
-
 def run_training() -> None:
     neptune.init('tati/nfl')
     # Create experiment with defined parameters
@@ -236,9 +226,9 @@ def run_training() -> None:
     model_eval.to(device)
     print(f'Mode loaded, config: {config}')
 
-    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta_4.csv')  
-    video_labels = filter_impacts(video_labels) 
-
+    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta_4_filt.csv')  
+    print(f'all video images: {len(video_labels)}')
+    
     images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
     images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
     print('video_valid: ', len(images_valid), images_valid[:5])
