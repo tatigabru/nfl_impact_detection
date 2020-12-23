@@ -68,7 +68,7 @@ loss_delta = 1e-4
 gpu_number = 0
 
 model_name = 'effdet5'
-experiment_tag = '2classes_cont_run5_run9' # classes, no pretrain
+experiment_tag = '2classes_cont_run3_run9' # classes, no pretrain
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
@@ -204,7 +204,7 @@ def run_training() -> None:
                               tags=[experiment_name, experiment_tag],
                               upload_source_files=[os.path.basename(__file__), 'get_transforms.py', 'dataset.py'])
     neptune.append_tags(f'fold_{fold}')   
-    neptune.append_tags(['images', 'no padding', 'video_meta_4', 'filtered_impacts'])  
+    neptune.append_tags(['images', 'no padding', 'video_meta_4', 'filtered_impacts', 'train_augs'])  
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
     print(f'device: {device}')
 
@@ -215,7 +215,7 @@ def run_training() -> None:
     config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
     weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin' 
-    weights_path = '../../checkpoints/effdet5_fold_0_512_2classes_cont_run3_run5/best-checkpoint-008epoch.bin'   
+    # weights_path = '../../checkpoints/effdet5_fold_0_512_2classes_cont_run3_run5/best-checkpoint-008epoch.bin'   
     checkpoint = torch.load(weights_path, map_location=f'cuda:{gpu_number}')
     transfer_weights(model = net, model_state_dict = checkpoint['model_state_dict'])
     print(f'Weights loaded from: {weights_path}')
@@ -235,13 +235,13 @@ def run_training() -> None:
     print('video_train: ', len(images_train), images_train[:5])
 
     train_dataset = DatasetRetriever(        
-            image_ids=images_train[:16],
+            image_ids=images_train,
             marking=video_labels,
             transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = DatasetRetriever(
-        image_ids=images_valid[:16],
+        image_ids=images_valid,
         marking=video_labels,
         transforms=get_valid_transforms(image_size),        
         )
