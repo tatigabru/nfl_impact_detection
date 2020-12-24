@@ -198,11 +198,11 @@ def run_inference() -> None:
     print(test_df.shape)
     #gameKey,playID,view,video,frame,left,width,top,height
     #57590,3607,Endzone,57590_003607_Endzone.mp4,1,1,1,1,1
-    test_df['gameKey'] = test_df.image_name.str.split('_').str[0].astype(int)
-    test_df['playID'] = test_df.image_name.str.split('_').str[1].astype(int)
-    test_df['view'] = test_df.image_name.str.split('_').str[2]
-    test_df['frame'] = test_df.image_name.str.split('_').str[3].str.replace('.png','').astype(int)
-    test_df['video'] = test_df.image_name.str.rsplit('_',1).str[0] + '.mp4'
+    test_df['gameKey'] = test_df.image_name.astype(str).str.split('_').str[0].astype(int)
+    test_df['playID'] = test_df.image_name.astype(str).str.split('_').str[1].astype(int)
+    test_df['view'] = test_df.image_name.astype(str).str.split('_').str[2]
+    test_df['frame'] = test_df.image_name.astype(str).str.split('_').str[3].str.replace('.png','').astype(int)
+    test_df['video'] = test_df.image_name.astype(str).str.rsplit('_',1).str[0] + '.mp4'
     test_df = test_df[["gameKey","playID","view","video","frame","left","width","top","height"]]
     print(test_df.head())
     test_df.to_csv(f'{SAVE_DIR}/{model_name}_test_df.csv', index=False)
