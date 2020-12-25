@@ -59,7 +59,7 @@ inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 15
+n_epochs = 30
 factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-8
@@ -125,7 +125,7 @@ def run_training() -> None:
                               tags=[experiment_name, experiment_tag],
                               upload_source_files=[os.path.basename(__file__), 'get_transforms.py', 'dataset.py'])
     neptune.append_tags(f'fold_{fold}')   
-    neptune.append_tags(['all video and images', 'no padding'])  
+    neptune.append_tags(['all video and images', 'no padding', 'all_meta2', 'train_augs'])  
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
     print(f'device: {device}')
 
@@ -155,14 +155,14 @@ def run_training() -> None:
 
     train_dataset = HelmetDataset(
             images_dir = TRAIN_VIDEO,   
-            image_ids=images_train,
+            image_ids=images_train[:16],
             marking=video_labels,
             transforms=get_train_transforms(image_size),            
             )
 
     validation_dataset = HelmetDataset(
         images_dir = TRAIN_VIDEO,
-        image_ids=images_valid,
+        image_ids=images_valid[:16],
         marking=video_labels,
         transforms=get_valid_transforms(image_size),        
         )

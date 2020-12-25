@@ -157,7 +157,7 @@ if __name__ == "__main__":
     video_folds = pd.read_csv(FOLDS_FILE)
     print(len(video_folds))
 
-    video_labels = propagate_impacts(df, num_frames=4)
+    video_labels = propagate_impacts(df, num_frames=2)
     video_labels['image_name'] = video_labels['video'].str.replace('.mp4', '') + '_' + video_labels['frame'].astype(str) + '.png'
     # video_labels = video_labels[video_labels.groupby('image_name')['impact'].transform("sum") > 0].reset_index(drop=True)
     video_labels['impact'] = video_labels['impact'].astype(int)+1
@@ -179,10 +179,8 @@ if __name__ == "__main__":
     for index, row in video_folds.iterrows():        
         video_labels.loc[video_labels['video_id'] == row['video'], 'fold'] = row['fold']
     
-    video_labels.to_csv(f'{DATA_DIR}/video_meta_4_filt.csv', index=False)
-    print(len(video_labels))
-
-    
+    video_labels.to_csv(f'{DATA_DIR}/video_meta_2_filt.csv', index=False)
+    print(len(video_labels))    
 
    # META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
    # FOLDS_FILE = os.path.join(DATA_DIR, 'image_folds.csv')
