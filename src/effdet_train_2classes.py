@@ -58,17 +58,17 @@ inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 2
+n_epochs = 20
 factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-8
 lr_patience = 1
 overall_patience = 5
 loss_delta = 1e-4
-gpu_number = 0
+gpu_number = 1
 
 model_name = 'effdet5'
-experiment_tag = '2classes_cont_run3_run9' # classes, no pretrain
+experiment_tag = '2classes_cont_run3_run10' # classes, no pretrain
 experiment_name = f'{model_name}_fold_{fold}_{image_size}_{experiment_tag}'
 checkpoints_dir = f'../../checkpoints/{experiment_name}'
 os.makedirs(checkpoints_dir, exist_ok=True)
@@ -204,7 +204,7 @@ def run_training() -> None:
                               tags=[experiment_name, experiment_tag],
                               upload_source_files=[os.path.basename(__file__), 'get_transforms.py', 'dataset.py'])
     neptune.append_tags(f'fold_{fold}')   
-    neptune.append_tags(['images', 'no padding', 'video_meta_4', 'filtered_impacts', 'train_augs'])  
+    neptune.append_tags(['images', 'no padding', 'video_meta_2', 'filtered_impacts', 'train_augs'])  
     device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
     print(f'device: {device}')
 
@@ -226,7 +226,7 @@ def run_training() -> None:
     model_eval.to(device)
     print(f'Mode loaded, config: {config}')
 
-    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta_4_filt.csv')  
+    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta_2_filt.csv')  
     print(f'all video images: {len(video_labels)}')
     
     images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
