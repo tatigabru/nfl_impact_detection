@@ -19,19 +19,28 @@ BOX_COLOR = (255, 0, 0) # Red
 TEXT_COLOR = (255, 255, 255) # White
 
 
-class Helmet_2class_Dataset(Dataset):
+class FramesDataset(Dataset):
 
-    def __init__(self, images_dir, marking, image_ids, transforms=None, test=False):
+    def __init__(self, images_dir, marking, image_ids, transforms=None, number = 2):
         super().__init__()
         self.images_dir = images_dir 
         self.image_ids = image_ids
         self.marking = marking
         self.transforms = transforms
+        self.num = number
         
     def __getitem__(self, index: int):
-        image_id = self.image_ids[index]        
-        image, boxes, labels = self.load_image_and_boxes(index)
- 
+        image_id = self.image_ids[index]  
+        try:
+            image, boxes, labels = self.concat_images(self, image_id, self.num)    
+        except:
+            print(f'No {image_id} frames, get other video/frame')
+            pass            
+        if image is None:
+            print(f'No {image_id} frames, get other video/frame')
+            pass
+
+        # transform multichannel image
         if self.transforms:
             for i in range(10):
                 sample = self.transforms(**{
@@ -61,25 +70,59 @@ class Helmet_2class_Dataset(Dataset):
     def __len__(self) -> int:
         return self.image_ids.shape[0]
     
-    def load_image(self, image_id):
-        image_path = os.path.join(self.images_dir, image_id)      
-        image = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
-        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).astype(np.float32)
-        image /= 255.0
-        
-        return image
 
-    def load_image_and_boxes(self, image_id):
-        image_path = os.path.join(self.images_dir, image_id)      
-        image = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
-        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).astype(np.float32)
-        image /= 255.0
+    def concat_images(self, image_id, num):
+        """
+
+
+
+        """
+        # 57583_000082_Endzone_1.png
+        video_id = self.marking[self.marking['image_name'] == image_id].video.unique()[0]
+        video_id = video_id.str.replace('.mp4', '')
+        frame = self.marking[self.marking['image_name'] == image_id].frame.unique()[0]
+        print(video_id, frame)
+        for idx, i in enumerate(range(frame-num, frame+num+1)):
+            image_id = video_id + '_' + str(i) + '.png'
+            image_path = os.path.join(self.images_dir, image_id) 
+            try:     
+                img = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
+            except:
+                print(f'No {image_id} get other video/frame')
+                return None
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32)
+            gray /= 255.0
+            gray = np.expand_dims(gray, axis = 2)  
+            if idx == 0:
+                image = gray
+            else:
+            # concatenate         
+                image = np.concatenate((image, gray), axis=2) 
+        # get label for central image
+        image_id = video_id + '_' + str(frame) + '.png'        
         records = self.marking[self.marking['image_name'] == image_id]
         boxes = records[['x', 'y', 'w', 'h']].values
         boxes[:, 2] = boxes[:, 0] + boxes[:, 2]
         boxes[:, 3] = boxes[:, 1] + boxes[:, 3]
         labels = records['impact'].values
 
-        return image, boxes, labels
+        return image, boxes, labels          
+
+
+    def load_image(self, image_id):
+        image_path = os.path.join(self.images_dir, image_id)      
+        image = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).astype(np.float32)
+        image /= 255.0        
+        return image
+    
+
+    def load_boxes(self, image_id):
+        records = self.marking[self.marking['image_name'] == image_id]
+        boxes = records[['x', 'y', 'w', 'h']].values
+        boxes[:, 2] = boxes[:, 0] + boxes[:, 2]
+        boxes[:, 3] = boxes[:, 1] + boxes[:, 3]
+        labels = records['impact'].values
+
+        return boxes, labels

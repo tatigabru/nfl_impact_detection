@@ -58,7 +58,7 @@ inf_batch_size = 16
 effective_batch_size = 4
 grad_accum = effective_batch_size // batch_size
 image_size = 512
-n_epochs = 20
+n_epochs = 2
 factor = 0.2
 start_lr = 2e-3
 min_lr = 1e-8
@@ -121,8 +121,12 @@ class DatasetRetriever(Dataset):
         self.transforms = transforms
        
     def __getitem__(self, index: int):
-        image_id = self.image_ids[index]        
-        image, boxes, labels = self.load_image_and_boxes(index)
+        image_id = self.image_ids[index]   
+        try:     
+            image, boxes, labels = self.load_image_and_boxes(index)
+        except:
+            print('Did not find file {image_id}')
+            pass
         
         if self.transforms:
             for i in range(10):
@@ -155,7 +159,7 @@ class DatasetRetriever(Dataset):
         return self.image_ids.shape[0]
 
     def load_image_and_boxes(self, index):
-        image_id = self.image_ids[index]        
+        image_id = self.image_ids[index]     
         image = cv2.imread(f'{TRAIN_VIDEO}/{image_id}', cv2.IMREAD_COLOR).copy().astype(np.float32)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
         image /= 255.0

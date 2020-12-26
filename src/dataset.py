@@ -29,9 +29,13 @@ class HelmetDataset(Dataset):
         self.transforms = transforms        
 
     def __getitem__(self, index: int):
-        image_id = self.image_ids[index]        
-        image, boxes = self.load_image_and_boxes(index) 
-
+        image_id = self.image_ids[index]   
+        try:     
+            image, boxes = self.load_image_and_boxes(index)
+        except:
+            print('Did not find file {image_id}')
+            pass     
+    
         # use only one class: helmet
         labels = np.full((boxes.shape[0],), 1)         
         if self.transforms:
