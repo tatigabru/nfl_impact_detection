@@ -11,7 +11,7 @@ DATA_DIR = '../../data/'
 META_FILE = os.path.join(DATA_DIR, 'train_labels.csv')
 
 
-def make_images_from_video(video_name, video_labels, video_dir, out_dir):
+def make_images_from_video(video_name, video_dir, out_dir):
     """Helper to get image frames from videos"""
     video_path=f"{video_dir}/{video_name}"
     video_name = os.path.basename(video_path)
@@ -23,6 +23,7 @@ def make_images_from_video(video_name, video_labels, video_dir, out_dir):
         if not it_worked:
             break
         frame += 1
+        print(frame)
         image_path = f'{out_dir}/{video_name}'.replace('.mp4',f'_{frame}.png')
         success = cv2.imwrite(image_path, img)
         if not success:
@@ -52,18 +53,33 @@ def make_test_frames():
     pool.map(write_frames, map(lambda video_name: f"{video_dir}/{video_name}", test_videos))
 
 
-if __name__ == "__main__":    
+def make_train():
     video_dir = '../../data/train'
     video_labels = pd.read_csv(META_FILE).fillna(0)
     uniq_video = video_labels.video.unique()    
     out_dir = '../../data/train_images_full/'
     os.makedirs(out_dir, exist_ok=True)
     for video_name in uniq_video:
-        make_images_from_video(video_name, video_labels, video_dir, out_dir)
-   
+        make_images_from_video(video_name, video_dir, out_dir)
+
+
+def make_test():
     video_dir = '../../data/test'
     uniq_video = os.listdir(video_dir)
     out_dir = '../../data/test_images/'
     os.makedirs(out_dir, exist_ok=True)
     for video_name in uniq_video:
-        make_images_from_video(video_name, pd.DataFrame(), video_dir, out_dir)
+        make_images_from_video(video_name, video_dir, out_dir)
+
+
+def make_video_from_frames(video_name, ):
+
+
+
+if __name__ == "__main__":    
+    video_dir = '../../data/youtube'
+    video_name = 'nfl_helmets_hits.mp4'    
+    out_dir = '../../data/helmet_hits/'
+    os.makedirs(out_dir, exist_ok=True)
+    make_images_from_video(video_name, video_dir, out_dir)   
+    
