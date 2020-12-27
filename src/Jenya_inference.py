@@ -56,14 +56,11 @@ DATASET_STD = (0.229, 0.224, 0.225)
 
 
 # CenterNet
-
 CenterNetEncodeResultWithImpact = namedtuple("CenterNetEncodeResultWithImpact", ["heatmap", "classmap", "size", "offset"])
 CenterNetDecodeResultWithImpact = namedtuple("CenterNetDecodeResultWithImpact", ["bboxes", "labels", "scores", "objectness"])
 VideoInferenceResult = namedtuple("VideoInferenceResult", ["submission", "raw_predictions"])
 
 # Functions
-
-
 def bes_radius(det_size, min_overlap=0.5) -> int:
     """Compute radius of gaussian.
     Arguments:

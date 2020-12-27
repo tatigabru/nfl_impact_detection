@@ -72,8 +72,17 @@ def make_test():
         make_images_from_video(video_name, video_dir, out_dir)
 
 
-def make_video_from_frames(video_name, ):
-
+def make_video_from_frames(video_name, imade_dir, start, stop):
+    VIDEO_CODEC = "MP4V"
+    writer = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*VIDEO_CODEC), 30, (1280, 720))
+    for frame in range(start, stop+1):
+        image_name = f'nfl_helmets_hits_{frame}.png'
+        img_path = os.listdir(imade_dir, image_name) 
+        img = cv2.imread(img_path)  
+        print(img_path)      
+        writer.write(img)
+    cv2.destroyAllWindows()
+    writer.release()
 
 
 if __name__ == "__main__":    
@@ -81,5 +90,8 @@ if __name__ == "__main__":
     video_name = 'nfl_helmets_hits.mp4'    
     out_dir = '../../data/helmet_hits/'
     os.makedirs(out_dir, exist_ok=True)
-    make_images_from_video(video_name, video_dir, out_dir)   
+    # make_images_from_video(video_name, video_dir, out_dir)   
+
+    video_name = out_dir + 'hit279.mp4'  
+    make_video_from_frames(video_name, out_dir, start=267, stop=383)
     
