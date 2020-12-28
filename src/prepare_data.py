@@ -115,17 +115,21 @@ def create_meta_nfl_helmets_hits():
     rows.append(['hit3194.mp4', 3147-3032+1, 'head', 481, 334, 512, 366])
     rows.append(['hit3194.mp4', 3194-3032+1, 'head', 637, 241, 668, 274])
     rows.append(['hit3194.mp4', 3194-3032+1, 'head', 625, 250, 638, 276]) # not very visible, behind the first one
-    rows.append(['hit3613.mp4', 3613-3474+1, 'head', 0, 0, 0, 0])
-    rows.append(['hit4457.mp4', 4457-4422+1, 'shoulder', 0, 0, 0, 0])
-    rows.append(['hit4934.mp4', 4934-4802+1, 'head', 0, 0, 0, 0])
+    rows.append(['hit3613.mp4', 3613-3474+1, 'head', 612, 270, 627, 280])
+    rows.append(['hit3613.mp4', 3613-3474+1, 'head', 627, 269, 645, 288])
+    rows.append(['hit4457.mp4', 4457-4422+1, 'shoulder', 560, 320, 582,345])
+    rows.append(['hit4934.mp4', 4934-4802+1, 'head', 721, 282, 746, 310])
+    rows.append(['hit4934.mp4', 4934-4802+1, 'head', 735, 282, 750, 304])
     rows.append(['hit5319.mp4', 5319-5164+1, 'head', 781, 324, 800, 342])
     rows.append(['hit5319.mp4', 5319-5164+1, 'head', 793, 321, 809, 335])
     rows.append(['hit5926.mp4', 5926-5832+1, 'head', 593, 260, 614, 293])
     rows.append(['hit5926.mp4', 5926-5832+1, 'head', 612, 261, 634, 293])
     rows.append(['hit6401.mp4', 6401-6214+1, 'head', 777, 267, 816, 311])
     rows.append(['hit6401.mp4', 6401-6214+1, 'head', 755, 269, 786, 312])
-    rows.append(['hit9585.mp4', 9585-9447+1, 'head', 0, 0, 0, 0])
-
+    rows.append(['hit9585.mp4', 9585-9447+1, 'head', 761, 315, 785, 348])
+    rows.append(['hit9585.mp4', 9585-9447+1, 'head', 773, 328, 801, 355])
+    rows.append(['hit9585.mp4', 9615-9447+1, 'head', 506, 300, 527, 324])
+    rows.append(['hit9585.mp4', 9615-9447+1, 'head', 523, 303, 550, 332])
     for idx, row in enumerate(rows, start = 1):
         df.loc[idx] = row
 
