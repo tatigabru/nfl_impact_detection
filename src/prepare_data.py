@@ -67,9 +67,9 @@ def make_train():
 
 
 def make_test():
-    video_dir = '../../data/test'
+    video_dir = '../../data/pred_test/densenet121'
     uniq_video = os.listdir(video_dir)
-    out_dir = '../../data/test_images/'
+    out_dir = '../../data/test_preds/'
     os.makedirs(out_dir, exist_ok=True)
     for video_name in uniq_video:
         make_images_from_video(video_name, video_dir, out_dir)
@@ -139,15 +139,18 @@ def create_meta_nfl_helmets_hits():
     return df
 
 
-if __name__ == "__main__":    
-    video_dir = '../../data/youtube'
-    video_name = 'nfl_helmets_hits.mp4'    
-    out_dir = '../../data/helmet_hits/'
-    # os.makedirs(out_dir, exist_ok=True)
-    # make_images_from_video(video_name, video_dir, out_dir) 
+def make_youtube_frames(video_dir = '../../data/youtube', video_name = 'nfl_helmets_hits.mp4', out_dir = '../../data/helmet_hits/'):
+    os.makedirs(out_dir, exist_ok=True)
+    make_images_from_video(video_name, video_dir, out_dir) 
+
+
+    
+if __name__ == "__main__":  
+    make_test()  
+    
 
     #video_name = out_dir + 'hit4457.mp4'  
     #make_video_from_frames(video_name, out_dir, start=4422, stop=4514)
     
-    df = create_meta_nfl_helmets_hits()
-    df.to_csv( out_dir + 'hits_meta.csv', index=False)
+    #df = create_meta_nfl_helmets_hits()
+    #df.to_csv( out_dir + 'hits_meta.csv', index=False)
