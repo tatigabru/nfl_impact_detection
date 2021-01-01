@@ -1,13 +1,15 @@
 # Imports
 from typing import List, Dict, Optional, Tuple, Union, Type, Callable
-# import cv2
+from collections import defaultdict, namedtuple
+import cv2
 import os
 import numpy as np
 import pandas as pd
-
+from matplotlib import pyplot as plt
+# from pytorch_toolbelt.utils import image_to_tensor, fs, to_numpy, rgb_image_from_tensor
 from ensemble_boxes import nms, soft_nms, weighted_boxes_fusion, non_maximum_weighted
 
-
+BOX_COLOR = (0, 255, 255)
 PREDS_DIR = '../../preds'
 PREDS = [f'../../preds/densenet121_no_keepmax_fold{fold}.csv' for fold in range(4)]
 
@@ -27,20 +29,34 @@ def show_image(im, name='image'):
     cv2.destroyAllWindows()
 
 
-def show_boxes(boxes_list, scores_list, labels_list, image_size=800):
-    thickness = 5
-    color_list = gen_color_list(len(boxes_list), len(np.unique(labels_list)))
-    image = np.zeros((image_size, image_size, 3), dtype=np.uint8)
-    image[...] = 255
+def show_boxes(image, boxes_list, scores_list, labels_list, image_size=(720, 1280)):
+    thickness = 1
+    colors_to_use = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255), (255, 0, 255), (255, 255, 0), (0, 0, 0)]
+    color_list = gen_color_list(len(boxes_list), len(labels_list))
     for i in range(len(boxes_list)):
         for j in range(len(boxes_list[i])):
-            x1 = int(image_size * boxes_list[i][j][0])
-            y1 = int(image_size * boxes_list[i][j][1])
-            x2 = int(image_size * boxes_list[i][j][2])
-            y2 = int(image_size * boxes_list[i][j][3])
-            lbl = labels_list[i][j]
-            cv2.rectangle(image, (x1, y1), (x2, y2), color_list[i][lbl], int(thickness * scores_list[i][j]))
+            x1 = int(image_size[1] * boxes_list[i][j][0])
+            y1 = int(image_size[0] * boxes_list[i][j][1])
+            x2 = int(image_size[1] * boxes_list[i][j][2])
+            y2 = int(image_size[0] * boxes_list[i][j][3])
+            lbl = labels_list[i]
+            cv2.rectangle(image, (x1, y1), (x2, y2), colors_to_use[i], int(thickness))
+    #plt.figure(figsize=(12,6))        
+    #plt.imshow(image) 
+    #plt.savefig(f'../../output/{image_id}_bboxes.png')
+    #plt.show()
     show_image(image)
+
+
+def gen_color_list(model_num, labels_num):
+    color_list = np.zeros((model_num, labels_num, 3))
+    colors_to_use = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255), (255, 0, 255), (255, 255, 0), (0, 0, 0)]
+    total = 0
+    for i in range(model_num):
+        for j in range(labels_num):
+            color_list[i, j, :] = colors_to_use[total]
+            total = (total + 1) % len(colors_to_use)
+    return color_list
 
 
 def run_wbf(predictions, image_index, image_size=512, iou_thr=0.55, skip_box_thr=0.7, weights=None):
@@ -62,7 +78,6 @@ def load_image_preds(image_id: str, preds: pd.DataFrame, image_shape=(720, 1280)
     # xyxy
     boxes[:, 2] = boxes[:, 0] + boxes[:, 2] 
     boxes[:, 3] = boxes[:, 1] + boxes[:, 3]    
-    # print(boxes)    
     # normalize
     image_height, image_width = image_shape
     coords2norm = np.array([[1.0 / image_width, 1.0 / image_height, 1.0 / image_width, 1.0 / image_height]])
@@ -76,7 +91,7 @@ def load_image_preds(image_id: str, preds: pd.DataFrame, image_shape=(720, 1280)
     # print(boxes)
     scores = df.scores.values
     labels = df.label.values
-    print(f'boxes: {boxes} \n scores: {scores} \n labels: {labels}')
+    # print(f'boxes: {boxes} \n scores: {scores} \n labels: {labels}')
     return boxes, scores, labels
 
 
@@ -89,9 +104,28 @@ def wbf_image_preds(image_id: str, weights, iou_thr, skip_box_thr):
         boxes_list.append(boxes) 
         scores_list.append(scores) 
         labels_list.append(labels)
+    boxes, scores, labels = weighted_boxes_fusion(boxes_list, scores_list, labels_list, weights=weights, iou_thr=iou_thr, skip_box_thr=skip_box_thr)
+    # print(f'wbf boxes: {boxes} \n wbf scores: {scores} \n wbf labels: {labels}')  
+    return boxes, scores, labels
+
+
+def plot_wbf_image_preds(image_path: str, image_id: str, weights, iou_thr, skip_box_thr):
+    """Ensemble boxes for a single image"""
+    boxes_list, scores_list, labels_list = [], [], []
+    # combine all preds for an image
+    for df in dfs:
+        boxes, scores, labels = load_image_preds(image_id, df)
+        boxes_list.append(boxes) 
+        scores_list.append(scores) 
+        labels_list.append(labels)
+    # plot all bboxes
+    image = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+    show_boxes(image.copy(), boxes_list, scores_list, labels_list)
     # print(boxes_list, scores_list, labels_list)
     boxes, scores, labels = weighted_boxes_fusion(boxes_list, scores_list, labels_list, weights=weights, iou_thr=iou_thr, skip_box_thr=skip_box_thr)
-    print(f'wbf boxes: {boxes} \n wbf scores: {scores} \n wbf labels: {labels}')    
+    print(f'wbf boxes: {boxes} \n wbf scores: {scores} \n wbf labels: {labels}') 
+    show_boxes(image.copy(), [boxes], [scores], [labels.astype(np.int32)])
     return boxes, scores, labels
 
 
@@ -100,6 +134,32 @@ def preprocess_df(df):
     df['image_name'] = df['video'].str.replace('.mp4', '') + '_' + df['frame'].astype(str) + '.png'
     df["right"] = df["left"] + df["width"]
     df["bottom"] = df["top"] + df["height"]
+    return df
+
+
+def combine_preds_wbf(images: list, df: pd.DataFrame, image_size, weights, iou_thr, skip_box_thr):
+    row = 0
+    for image_id in images:
+        gameKey, playID, view, frame = image_id.split('_')[:4]
+        video = f'{gameKey}_{playID}_{view}.mp4'
+        boxes, scores, labels = wbf_image_preds(image_id, weights, iou_thr, skip_box_thr)
+        for (x1, y1, x2, y2), score, label in zip(boxes, scores, labels):
+            df.loc[row,"gameKey"] = gameKey
+            df.loc[row,"playID"] = int(playID)
+            df.loc[row,"view"] = view
+            df.loc[row,"video"] = video
+            df.loc[row,"frame"] = int(frame[:-4])
+            df.loc[row,"left"] = int(x1*image_size[1])
+            df.loc[row,"width"] = int((x2 - x1)*image_size[1])
+            df.loc[row,"top"] = int(y1*image_size[0])
+            df.loc[row,"height"] = int((y2 - y1)*image_size[0])
+            df.loc[row,"right"] = int(x2*image_size[1])
+            df.loc[row,"bottom"] = int(y2*image_size[0])
+            df.loc[row,"scores"] = score
+            df.loc[row,"label"] = label 
+            df.loc[row,"image_name"] = image_id 
+            row += 1
+
     return df
 
 
@@ -114,37 +174,170 @@ def test_load_image_preds(df):
     print(len(scores), len(labels), len(boxes))
 
 
+def test_wbf(image_id, weights, iou_thr, skip_box_thr):
+    print(f'image_id: {image_id}')
+    boxes, scores, labels = wbf_image_preds(image_id, weights, iou_thr, skip_box_thr)
+    print(f'wbf boxes: {boxes} \n wbf scores: {scores} \n wbf labels: {labels}') 
+    image_path = f'../../data/test_preds/labeled_{image_id}'
+    boxes, scores, labels =  plot_wbf_image_preds(image_path, image_id, weights, iou_thr, skip_box_thr)
+
+"""
+
+Postprocessing
+
+"""
+def box_pair_iou(bbox1, bbox2):
+    bbox1 = [float(x) for x in bbox1]
+    bbox2 = [float(x) for x in bbox2]
+
+    (x0_1, y0_1, x1_1, y1_1) = bbox1
+    (x0_2, y0_2, x1_2, y1_2) = bbox2
+
+    # get the overlap rectangle
+    overlap_x0 = max(x0_1, x0_2)
+    overlap_y0 = max(y0_1, y0_2)
+    overlap_x1 = min(x1_1, x1_2)
+    overlap_y1 = min(y1_1, y1_2)
+
+    # check if there is an overlap
+    if overlap_x1 - overlap_x0 <= 0 or overlap_y1 - overlap_y0 <= 0:
+        return 0
+
+    # if yes, calculate the ratio of the overlap to each ROI size and the unified size
+    size_1 = (x1_1 - x0_1) * (y1_1 - y0_1)
+    size_2 = (x1_2 - x0_2) * (y1_2 - y0_2)
+    size_intersection = (overlap_x1 - overlap_x0) * (overlap_y1 - overlap_y0)
+    size_union = size_1 + size_2 - size_intersection
+
+    return size_intersection / size_union
+
+
+def track_boxes(videodf, dist=1, iou_thresh=0.8):
+    # most simple algorithm for tracking boxes
+    # based on iou and hungarian algorithm
+    track = 0
+    n = len(videodf)
+    inds = list(videodf.index)
+    frames = [-1000] + sorted(videodf["frame"].unique().tolist())
+    ind2box = dict(zip(inds, videodf[["left", "top", "right", "bottom"]].values.tolist()))
+    ind2track = {}
+
+    for f, frame in enumerate(frames[1:]):
+        cur_inds = list(videodf[videodf["frame"] == frame].index)
+        assigned_cur_inds = []
+        if frame - frames[f] <= dist:
+            prev_inds = list(videodf[videodf["frame"] == frames[f]].index)
+            cost_matrix = np.ones((len(cur_inds), len(prev_inds)))
+
+            for i, ind1 in enumerate(cur_inds):
+                for j, ind2 in enumerate(prev_inds):
+                    box1 = ind2box[ind1]
+                    box2 = ind2box[ind2]
+                    a = box_pair_iou(box1, box2)
+                    cost_matrix[i, j] = 1 - a if a > iou_thresh else 1
+            row_is, col_js = linear_sum_assignment(cost_matrix)
+            # assigned_cur_inds = [cur_inds[i] for i in row_is]
+            for i, j in zip(row_is, col_js):
+                if cost_matrix[i, j] < 1:
+                    ind2track[cur_inds[i]] = ind2track[prev_inds[j]]
+                    assigned_cur_inds.append(cur_inds[i])
+
+        not_assigned_cur_inds = list(set(cur_inds) - set(assigned_cur_inds))
+        for ind in not_assigned_cur_inds:
+            ind2track[ind] = track
+            track += 1
+    tracks = [ind2track[ind] for ind in inds]
+    return tracks
+
+
+def add_tracking(df, dist=1, iou_thresh=0.8) -> pd.DataFrame:
+    # add tracking data for boxes. each box gets track id
+    df = add_bottom_right(df)
+    df["track"] = -1
+    videos = df["video"].unique()
+
+    for video in videos:
+        videodf = df[df["video"] == video]
+        tracks = track_boxes(videodf, dist=dist, iou_thresh=iou_thresh)
+        df.loc[list(videodf.index), "track"] = tracks
+    return df
+
+
+def keep_maximums(df, iou_thresh=0.35, dist=2) -> pd.DataFrame:
+    # track boxes across frames and keep only box with maximum score
+    df = add_tracking(df, dist=dist, iou_thresh=iou_thresh)
+    df = df.sort_values(["video", "track", "scores"], ascending=False).drop_duplicates(["video", "track"])
+    return df
+
+
+def keep_mean_frame(df, iou_thresh=0.35, dist=2) -> pd.DataFrame:
+    df = add_tracking(df, dist=dist, iou_thresh=iou_thresh)
+    keepdf = df.groupby(["video", "track"]).mean()["frame"].astype(int).reset_index()
+    df = df.merge(keepdf, on=["video", "track", "frame"])
+    return df
+
+
+def temporal_nms(
+    df: pd.DataFrame, helmet_tracking_iou_thresh=0.35, helmet_tracking_dist=2, impact_score=0.6, kernel_size: int = 7
+) -> pd.DataFrame:
+    """
+
+    :param df:
+    :param helmet_tracking_iou_thresh:
+    :param helmet_tracking_dist:
+    :param impact_score:
+    :param kernel_size:
+    :return:
+    """
+    # track boxes across frames and keep only box with maximum score
+    df = add_tracking(df, dist=helmet_tracking_dist, iou_thresh=helmet_tracking_iou_thresh)
+    df = df.sort_values(by="frame").reset_index()
+
+    videos = df["video"].unique()
+    for video in videos:
+        tracks = df["track"].unique()
+        for track in tracks:
+            track_df = df[(df["video"] == video) & (df["track"] == track)]
+
+            scores = track_df.scores.values
+            scores_max = maximum_filter(scores, kernel_size)
+
+            # scores = torch.from_numpy(track_df.scores.values).unsqueeze(0).unsqueeze(0)
+            # scores_max = torch.nn.functional.max_pool1d(scores, kernel_size=kernel_size, stride=1, padding=kernel_size // 2)
+            mask = scores == scores_max
+            scores_masked = scores * mask
+
+            df.loc[list(track_df.index), "scores"] = scores_masked
+
+    df = df[df.scores > impact_score]
+    return df
+
+
+
 if __name__ == "__main__":     
     # combine preds
     dfs = [pd.read_csv(preds_file) for preds_file in PREDS]
     dfs = [preprocess_df(df.copy()) for df in dfs]
-    df = dfs[2]
-    print(df.head())
-    image_ids = df['image_name'].unique()
-    print(len(image_ids), image_ids[:5])
-    image_id = image_ids[1]
-    boxes, scores, labels = load_image_preds(image_id, preds = df)
-    print(f'boxes: {boxes} \n scores: {scores} \n labels: {labels}')
-    
+    print(dfs[0].head())
+        
     # Accumulate all image_ids for all predictions
     images = set()
     for df in dfs:
         image_ids = df['image_name'].unique()        
         images = images.union(image_ids)
     images = list(sorted(images))
-    # print(len(images), images[:10])
+    print(len(images), images[:5])
 
-    image_id = images[0]
-    boxes_list, scores_list, labels_list = [], [], []
-    # combine all preds for an image
-    for df in dfs:
-        boxes, scores, labels = load_image_preds(image_id, df)
-        boxes_list.append(boxes) 
-        scores_list.append(scores) 
-        labels_list.append(labels)
-    # print(len(boxes_list), len(scores_list), len(labels_list))
-    print(boxes_list, scores_list, labels_list)
-
-    boxes, scores, labels = weighted_boxes_fusion(boxes_list, scores_list, labels_list, weights=weights, iou_thr=iou_thr, skip_box_thr=skip_box_thr)
+    image_id = images[2]
+    test_wbf(image_id, weights, iou_thr, skip_box_thr)
     
+    image_size = (720, 1280)
+    df = pd.DataFrame(columns = dfs[0].columns)
+    df = combine_preds_wbf(images, df, image_size, weights, iou_thr, skip_box_thr)
+    print(df.head())
+    print(df.info)        
+    df.to_csv('../../preds/raw_preds_wbf_densenet121.csv')
+
+
+
   

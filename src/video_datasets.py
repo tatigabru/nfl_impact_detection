@@ -73,9 +73,7 @@ class FramesDataset(Dataset):
 
     def concat_images(self, image_id, num):
         """
-
-
-
+        Concatenate images
         """
         # 57583_000082_Endzone_1.png
         video_id = self.marking[self.marking['image_name'] == image_id].video.unique()[0]
@@ -96,7 +94,7 @@ class FramesDataset(Dataset):
             if idx == 0:
                 image = gray
             else:
-            # concatenate         
+                # concatenate         
                 image = np.concatenate((image, gray), axis=2) 
         # get label for central image
         image_id = video_id + '_' + str(frame) + '.png'        
