@@ -23,7 +23,7 @@ def make_images_from_video(video_name, video_dir, out_dir, limit = None):
         if not it_worked:
             break
         frame += 1
-        print(frame)
+        # print(frame)
         image_path = f'{out_dir}/{video_name}'.replace('.mp4',f'_{frame}.png')
         success = cv2.imwrite(image_path, img)
         if not success:
@@ -144,7 +144,7 @@ def make_youtube_frames(video_dir = '../../data/youtube', video_name = 'nfl_helm
     make_images_from_video(video_name, video_dir, out_dir) 
 
 
-    
+
 if __name__ == "__main__":  
     make_test()  
     
