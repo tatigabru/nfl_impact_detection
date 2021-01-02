@@ -6,11 +6,10 @@ import os
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from scipy.optimize import linear_sum_assignment
-from scipy.ndimage.filters import maximum_filter
 from evaluate import evaluate_df
 # from pytorch_toolbelt.utils import image_to_tensor, fs, to_numpy, rgb_image_from_tensor
 from ensemble_boxes import nms, soft_nms, weighted_boxes_fusion, non_maximum_weighted
+from postprocessing import keep_maximums
 
 BOX_COLOR = (0, 255, 255)
 PREDS_DIR = '../../preds'
@@ -194,103 +193,11 @@ def test_wbf(image_id, dfs, weights, iou_thr, skip_box_thr):
     image_path = f'../../data/test_preds/labeled_{image_id}'
     boxes, scores, labels =  plot_wbf_image_preds(image_path, image_id, dfs, weights, iou_thr, skip_box_thr)
 
-"""
-
-Postprocessing
-
-"""
-def box_pair_iou(bbox1, bbox2):
-    bbox1 = [float(x) for x in bbox1]
-    bbox2 = [float(x) for x in bbox2]
-
-    (x0_1, y0_1, x1_1, y1_1) = bbox1
-    (x0_2, y0_2, x1_2, y1_2) = bbox2
-
-    # get the overlap rectangle
-    overlap_x0 = max(x0_1, x0_2)
-    overlap_y0 = max(y0_1, y0_2)
-    overlap_x1 = min(x1_1, x1_2)
-    overlap_y1 = min(y1_1, y1_2)
-
-    # check if there is an overlap
-    if overlap_x1 - overlap_x0 <= 0 or overlap_y1 - overlap_y0 <= 0:
-        return 0
-
-    # if yes, calculate the ratio of the overlap to each ROI size and the unified size
-    size_1 = (x1_1 - x0_1) * (y1_1 - y0_1)
-    size_2 = (x1_2 - x0_2) * (y1_2 - y0_2)
-    size_intersection = (overlap_x1 - overlap_x0) * (overlap_y1 - overlap_y0)
-    size_union = size_1 + size_2 - size_intersection
-
-    return size_intersection / size_union
-
-
-def track_boxes(videodf, dist=1, iou_thresh=0.8):
-    # most simple algorithm for tracking boxes
-    # based on iou and hungarian algorithm
-    track = 0
-    n = len(videodf)
-    inds = list(videodf.index)
-    frames = [-1000] + sorted(videodf["frame"].unique().tolist())
-    ind2box = dict(zip(inds, videodf[["left", "top", "right", "bottom"]].values.tolist()))
-    ind2track = {}
-
-    for f, frame in enumerate(frames[1:]):
-        cur_inds = list(videodf[videodf["frame"] == frame].index)
-        assigned_cur_inds = []
-        if frame - frames[f] <= dist:
-            prev_inds = list(videodf[videodf["frame"] == frames[f]].index)
-            cost_matrix = np.ones((len(cur_inds), len(prev_inds)))
-
-            for i, ind1 in enumerate(cur_inds):
-                for j, ind2 in enumerate(prev_inds):
-                    box1 = ind2box[ind1]
-                    box2 = ind2box[ind2]
-                    a = box_pair_iou(box1, box2)
-                    cost_matrix[i, j] = 1 - a if a > iou_thresh else 1
-            row_is, col_js = linear_sum_assignment(cost_matrix)
-            # assigned_cur_inds = [cur_inds[i] for i in row_is]
-            for i, j in zip(row_is, col_js):
-                if cost_matrix[i, j] < 1:
-                    ind2track[cur_inds[i]] = ind2track[prev_inds[j]]
-                    assigned_cur_inds.append(cur_inds[i])
-
-        not_assigned_cur_inds = list(set(cur_inds) - set(assigned_cur_inds))
-        for ind in not_assigned_cur_inds:
-            ind2track[ind] = track
-            track += 1
-    tracks = [ind2track[ind] for ind in inds]
-    return tracks
-
-
-def add_tracking(df, dist=1, iou_thresh=0.8) -> pd.DataFrame:
-    # add tracking data for boxes. each box gets track id
-    df = add_bottom_right(df)
-    df["track"] = -1
-    videos = df["video"].unique()
-
-    for video in videos:
-        videodf = df[df["video"] == video]
-        tracks = track_boxes(videodf, dist=dist, iou_thresh=iou_thresh)
-        df.loc[list(videodf.index), "track"] = tracks
-    return df
-
-
-def keep_maximums(df, iou_thresh=0.35, dist=2) -> pd.DataFrame:
-    # track boxes across frames and keep only box with maximum score
-    df = add_tracking(df, dist=dist, iou_thresh=iou_thresh)
-    df = df.sort_values(["video", "track", "scores"], ascending=False).drop_duplicates(["video", "track"])
-    return df
-
-
-def keep_mean_frame(df, iou_thresh=0.35, dist=2) -> pd.DataFrame:
-    df = add_tracking(df, dist=dist, iou_thresh=iou_thresh)
-    keepdf = df.groupby(["video", "track"]).mean()["frame"].astype(int).reset_index()
-    df = df.merge(keepdf, on=["video", "track", "frame"])
-    return df
-
 
 def grid_search(dfs, images, weights):
+    """
+    Helper to find optimal WBF parameters
+    """
     image_size = (720, 1280)
     df = pd.DataFrame(columns = dfs[0].columns)
     best_metric = 0
