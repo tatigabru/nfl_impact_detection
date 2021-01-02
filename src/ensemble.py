@@ -6,12 +6,17 @@ import os
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from evaluate import evaluate_df
 # from pytorch_toolbelt.utils import image_to_tensor, fs, to_numpy, rgb_image_from_tensor
 from ensemble_boxes import nms, soft_nms, weighted_boxes_fusion, non_maximum_weighted
 
 BOX_COLOR = (0, 255, 255)
 PREDS_DIR = '../../preds'
 PREDS = [f'../../preds/densenet121_no_keepmax_fold{fold}.csv' for fold in range(4)]
+
+TRACKING_IOU_THRESHOLD = 0.3
+TRACKING_FRAMES_DISTANCE = 11
+IMPACT_THRESHOLD_SCORE = 0.4
 
 weights = [1, 1, 1, 1]
 iou_thr = 0.5
@@ -95,7 +100,7 @@ def load_image_preds(image_id: str, preds: pd.DataFrame, image_shape=(720, 1280)
     return boxes, scores, labels
 
 
-def wbf_image_preds(image_id: str, weights, iou_thr, skip_box_thr):
+def wbf_image_preds(image_id, dfs, weights, iou_thr, skip_box_thr):
     """Ensemble boxes for a single image"""
     boxes_list, scores_list, labels_list = [], [], []
     # combine all preds for an image
@@ -109,7 +114,7 @@ def wbf_image_preds(image_id: str, weights, iou_thr, skip_box_thr):
     return boxes, scores, labels
 
 
-def plot_wbf_image_preds(image_path: str, image_id: str, weights, iou_thr, skip_box_thr):
+def plot_wbf_image_preds(image_path: str, image_id: str, dfs, weights, iou_thr, skip_box_thr):
     """Ensemble boxes for a single image"""
     boxes_list, scores_list, labels_list = [], [], []
     # combine all preds for an image
@@ -137,12 +142,12 @@ def preprocess_df(df):
     return df
 
 
-def combine_preds_wbf(images: list, df: pd.DataFrame, image_size, weights, iou_thr, skip_box_thr):
+def combine_preds_wbf(images: list, df: pd.DataFrame, dfs, image_size, weights, iou_thr, skip_box_thr):
     row = 0
     for image_id in images:
         gameKey, playID, view, frame = image_id.split('_')[:4]
         video = f'{gameKey}_{playID}_{view}.mp4'
-        boxes, scores, labels = wbf_image_preds(image_id, weights, iou_thr, skip_box_thr)
+        boxes, scores, labels = wbf_image_preds(image_id, dfs, weights, iou_thr, skip_box_thr)
         for (x1, y1, x2, y2), score, label in zip(boxes, scores, labels):
             df.loc[row,"gameKey"] = gameKey
             df.loc[row,"playID"] = int(playID)
@@ -174,12 +179,12 @@ def test_load_image_preds(df):
     print(len(scores), len(labels), len(boxes))
 
 
-def test_wbf(image_id, weights, iou_thr, skip_box_thr):
+def test_wbf(image_id, dfs, weights, iou_thr, skip_box_thr):
     print(f'image_id: {image_id}')
-    boxes, scores, labels = wbf_image_preds(image_id, weights, iou_thr, skip_box_thr)
+    boxes, scores, labels = wbf_image_preds(image_id, dfs, weights, iou_thr, skip_box_thr)
     print(f'wbf boxes: {boxes} \n wbf scores: {scores} \n wbf labels: {labels}') 
     image_path = f'../../data/test_preds/labeled_{image_id}'
-    boxes, scores, labels =  plot_wbf_image_preds(image_path, image_id, weights, iou_thr, skip_box_thr)
+    boxes, scores, labels =  plot_wbf_image_preds(image_path, image_id, dfs, weights, iou_thr, skip_box_thr)
 
 """
 
@@ -277,45 +282,40 @@ def keep_mean_frame(df, iou_thresh=0.35, dist=2) -> pd.DataFrame:
     return df
 
 
-def temporal_nms(
-    df: pd.DataFrame, helmet_tracking_iou_thresh=0.35, helmet_tracking_dist=2, impact_score=0.6, kernel_size: int = 7
-) -> pd.DataFrame:
-    """
-
-    :param df:
-    :param helmet_tracking_iou_thresh:
-    :param helmet_tracking_dist:
-    :param impact_score:
-    :param kernel_size:
-    :return:
-    """
-    # track boxes across frames and keep only box with maximum score
-    df = add_tracking(df, dist=helmet_tracking_dist, iou_thresh=helmet_tracking_iou_thresh)
-    df = df.sort_values(by="frame").reset_index()
-
-    videos = df["video"].unique()
-    for video in videos:
-        tracks = df["track"].unique()
-        for track in tracks:
-            track_df = df[(df["video"] == video) & (df["track"] == track)]
-
-            scores = track_df.scores.values
-            scores_max = maximum_filter(scores, kernel_size)
-
-            # scores = torch.from_numpy(track_df.scores.values).unsqueeze(0).unsqueeze(0)
-            # scores_max = torch.nn.functional.max_pool1d(scores, kernel_size=kernel_size, stride=1, padding=kernel_size // 2)
-            mask = scores == scores_max
-            scores_masked = scores * mask
-
-            df.loc[list(track_df.index), "scores"] = scores_masked
-
-    df = df[df.scores > impact_score]
-    return df
+def grid_search(dfs, images, weights):
+    image_size = (720, 1280)
+    df = pd.DataFrame(columns = dfs[0].columns)
+    best_metric = 0
+    for skip_box_thr in thresh_params:
+        for iou_thr in iou_params:        
+            df = combine_preds_wbf(images, df, dfs, image_size, weights, iou_thr, skip_box_thr)
+            save_path = f'{save_dir}/ens_{iou_thr}_{skip_box_thr}.csv'             
+            if os.path.isfile(save_path):
+                print('File already exists: {}. Skip'.format(save_path))
+                continue
+            df.to_csv(save_path, index=False)
+            prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=False)
+            print(f"Precision {prec}, recall {rec}, f1 {f1}")
+            if f1 > best_metric:
+                best_metric = f1 
+                best_iou = iou_thr
+                best_skip = skip_box_thr
+                # log results
+                out = open(f"{save_dir}/params_{iou_thr}_{skip_box_thr}.txt", 'w')
+                out.write('{}\n'.format(skip_box_thr))
+                out.write('{}\n'.format(weights))
+                out.write('{}\n'.format(iou_thr))
+                out.write('{}\n'.format(prec))
+                out.write('{}\n'.format(rec))
+                out.write('{}\n'.format(f1))
+                out.close()
+    print('Best metric: {}'.format(best_metric))
+    print('Best params: {}'.format(best_params))
 
 
 
 if __name__ == "__main__":     
-    # combine preds
+    # list preds dataframes
     dfs = [pd.read_csv(preds_file) for preds_file in PREDS]
     dfs = [preprocess_df(df.copy()) for df in dfs]
     print(dfs[0].head())
@@ -328,16 +328,28 @@ if __name__ == "__main__":
     images = list(sorted(images))
     print(len(images), images[:5])
 
+    # test and plot WBF
     image_id = images[2]
-    test_wbf(image_id, weights, iou_thr, skip_box_thr)
+    test_wbf(image_id, dfs, weights, iou_thr, skip_box_thr)
     
+    # combine WBF for all frames
     image_size = (720, 1280)
     df = pd.DataFrame(columns = dfs[0].columns)
-    df = combine_preds_wbf(images, df, image_size, weights, iou_thr, skip_box_thr)
+    df = combine_preds_wbf(images, df, dfs, image_size, weights, iou_thr, skip_box_thr)
     print(df.head())
-    print(df.info)        
-    df.to_csv('../../preds/raw_preds_wbf_densenet121.csv')
+    print(df.info())        
+    df.to_csv('../../preds/raw_preds_wbf_densenet121.csv', index = False)
 
+    # apply postprocessing    
+    filtered = df[df.scores > IMPACT_THRESHOLD_SCORE]
+    df_keepmax = keep_maximums(filtered, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
+    print(df_keepmax.head())
+    print(df_keepmax.info()) 
+    df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False)
 
-
+    gtdf = pd.read_csv('../../preds/test_densenet121_corrected.csv')
+    video_names = df_keepmax['video'].unique()
+    print('Number of videos for evaluation:', len(video_names))
+    prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=False)
   
+
