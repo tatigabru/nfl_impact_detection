@@ -358,6 +358,6 @@ if __name__ == "__main__":
     gtdf = pd.read_csv('../../preds/test_densenet121_corrected.csv')
     video_names = df_keepmax['video'].unique()
     print('Number of videos for evaluation:', len(video_names))
-    prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=False)
-  
+    prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=True)
+    print(f"Precision {prec}, recall {rec}, f1 {f1}")
 
