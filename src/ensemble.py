@@ -6,6 +6,8 @@ import os
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from scipy.optimize import linear_sum_assignment
+from scipy.ndimage.filters import maximum_filter
 from evaluate import evaluate_df
 # from pytorch_toolbelt.utils import image_to_tensor, fs, to_numpy, rgb_image_from_tensor
 from ensemble_boxes import nms, soft_nms, weighted_boxes_fusion, non_maximum_weighted
@@ -139,6 +141,12 @@ def preprocess_df(df):
     df['image_name'] = df['video'].str.replace('.mp4', '') + '_' + df['frame'].astype(str) + '.png'
     df["right"] = df["left"] + df["width"]
     df["bottom"] = df["top"] + df["height"]
+    return df
+
+
+def add_bottom_right(df):
+    df['right'] = df['left'] + df['width']
+    df['bottom'] = df['top'] + df['height']
     return df
 
 

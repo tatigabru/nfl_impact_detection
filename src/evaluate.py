@@ -4,7 +4,6 @@ from scipy.optimize import linear_sum_assignment
 from collections import defaultdict
 import warnings
 import pandas as pd
-from config import *
 
 warnings.simplefilter(action='ignore')
 
