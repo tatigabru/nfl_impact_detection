@@ -152,9 +152,9 @@ if __name__ == "__main__":
         print(f'\n EXPERIMENT {num}: distance = {dist}, IoU thres = {iou_thresh}')
         test_keep_maximums(df, iou_thresh=iou_thresh, dist=dist)
 
-    dist = 4
-    iou_threshholds = [0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
-    for iou_thresh in iou_threshholds:
-        num += 1
-        print(f'\n EXPERIMENT {num}: distance = {dist}, IoU thres = {iou_thresh}')
-        test_keep_maximums(df, iou_thresh=iou_thresh, dist=dist)
+    #dist = 4
+    #iou_threshholds = [0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
+    #for iou_thresh in iou_threshholds:
+    #    num += 1
+    #    print(f'\n EXPERIMENT {num}: distance = {dist}, IoU thres = {iou_thresh}')
+    #    test_keep_maximums(df, iou_thresh=iou_thresh, dist=dist)
