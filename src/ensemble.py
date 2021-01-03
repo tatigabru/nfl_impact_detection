@@ -17,7 +17,7 @@ PREDS = [f'../../preds/densenet121_no_keepmax_fold{fold}.csv' for fold in range(
 PRED_HITS = [f'../../preds/densenet121_hits_impactp01_fold{fold}.csv' for fold in range(4)]
 
 TRACKING_IOU_THRESHOLD = 0.24
-TRACKING_FRAMES_DISTANCE = 6
+TRACKING_FRAMES_DISTANCE = 9
 IMPACT_THRESHOLD_SCORE = 0.28
 
 weights = [1, 1, 1, 1]
@@ -26,11 +26,11 @@ skip_box_thr = 0.2
 
 best_metric = -1
 best_params = None
-skip_box_wbf_params = [0.15 + 0.02*i for i in range(10)]
-iou_wbf_params = [0.15 + 0.05*i for i in range(6)]
+skip_box_wbf_params = [0.13 + 0.01*i for i in range(10)]
+iou_wbf_params = [0.15 + 0.05*i for i in range(5)]
 dist_params = [i for i in range(2, 10)] 
-track_iou_params = [0.15 + 0.05*i for i in range(10)]
-impact_thres_params = [0.22 + 0.02*i for i in range(20)]
+track_iou_params = [0.15 + 0.05*i for i in range(6)]
+impact_thres_params = [0.20 + 0.02*i for i in range(9)]
 
 
 def show_image(im, name='image'):
@@ -158,13 +158,20 @@ def add_width_height(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def combine_preds_wbf(images: list, df: pd.DataFrame, dfs, image_size, weights, iou_thr, skip_box_thr) -> pd.DataFrame:
+    """
+    Helper, to combine raw predicitons for all images
+    Args:
+        images (List(str)): list of image names
+        df: pd.DataFrame : dataframe for combined predicitons
+        dfs (List(pd.DataFrame)): list of dataframes with predicitons to combine 
+    """
     row = 0
     for image_id in images:
         # for youtube dataset
         gameKey, playID, view = 0, 0, 0
         video, frame =  image_id.split('_')
         video = video + '.mp4'    
-        # for test dataset    
+        # for competition dataset    
         # gameKey, playID, view, frame = image_id.split('_')[:4]
         # video = f'{gameKey}_{playID}_{view}.mp4'
         boxes, scores, labels = wbf_image_preds(image_id, dfs, weights, iou_thr, skip_box_thr)
@@ -202,7 +209,9 @@ def test_wbf(image_id, dfs, weights, iou_thr, skip_box_thr):
     print(f'image_id: {image_id}')
     boxes, scores, labels = wbf_image_preds(image_id, dfs, weights, iou_thr, skip_box_thr)
     print(f'wbf boxes: {boxes} \n wbf scores: {scores} \n wbf labels: {labels}') 
+    # competiton data
     # image_path = f'../../data/test_preds/labeled_{image_id}'
+    # youtube data
     image_path = f'../../data/hits_images/{image_id}'
     boxes, scores, labels =  plot_wbf_image_preds(image_path, image_id, dfs, weights, iou_thr, skip_box_thr)
 
@@ -217,7 +226,6 @@ def grid_search_wbf(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, 
     num = 0
     for skip_box_thr in skip_box_wbf_params:
         for iou_thr in iou_wbf_params:  
-            num += 1 
             print(f'EXPERIMENT {num}, iou wbf thres {iou_thr}, skip {skip_box_thr}')  
             # combine WBF for all frames    
             df_combo = pd.DataFrame(columns = dfs[0].columns)
@@ -236,12 +244,12 @@ def grid_search_wbf(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, 
                 best_skip = skip_box_thr
                 # log results
                 out = open(f"{save_dir}/params_{iou_thr}_{skip_box_thr}.txt", 'w')
-                out.write('{}\n'.format(skip_box_thr))
-                out.write('{}\n'.format(weights))
-                out.write('{}\n'.format(iou_thr))
-                out.write('{}\n'.format(prec))
-                out.write('{}\n'.format(rec))
-                out.write('{}\n'.format(f1))
+                out.write('skip_box_thr: {}\n'.format(skip_box_thr))
+                out.write('weights: {}\n'.format(weights))
+                out.write('iou_thr: {}\n'.format(iou_thr))
+                out.write('precision: {}\n'.format(prec))
+                out.write('recall: {}\n'.format(rec))
+                out.write('f1: {}\n'.format(f1))
                 out.close()
     print('Best metric: {}'.format(best_metric))
     print(f'Best params: wbf_iou {best_iou}, skip threshold {best_skip}')
@@ -249,8 +257,93 @@ def grid_search_wbf(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, 
     results['best_f1'] = best_metric
     results['wbf_iou'] = best_iou
     results['best_skip'] = best_skip
-
     return results
+
+
+def grid_search_tracking(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, save_dir = '../../ensembling'):
+    """
+    Helper to find optimal tracking parameters
+    """
+    image_size = (720, 1280)
+    best_metric = 0
+    best_iou, best_dist = 0, 2
+    num = 0
+    for dist in dist_params:
+        for track_iou_thr in track_iou_params:  
+            print(f'EXPERIMENT {num}, iou track thres {track_iou_thr}, dist {dist}')  
+            # combine WBF for all frames    
+            df_combo = pd.DataFrame(columns = dfs[0].columns)
+            df_combo = combine_preds_wbf(images, df_combo, dfs, image_size, weights, iou_thr=0.2, skip_box_thr=0.17)            
+            print('Apply filtering after...') 
+            df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
+            print('Apply postprocessing...')  
+            df_keepmax = keep_maximums(df_combo, iou_thresh=track_iou_thr, dist=dist)
+            #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False) 
+            prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=True)
+            print(f"EXPERIMENT {num}, iou track thres {track_iou_thr}, dist {dist}, thres {IMPACT_THRESHOLD_SCORE} \n Precision {prec}, recall {rec}, f1 {f1}")
+            num += 1
+            if f1 > best_metric:
+                best_metric = f1 
+                best_iou = track_iou_thr
+                best_dist = dist
+                # log results
+                out = open(f"{save_dir}/params_{track_iou_thr}_{dist}.txt", 'w')
+                out.write('skip_box_thr: {}\n'.format(skip_box_thr))
+                out.write('weights: {}\n'.format(weights))
+                out.write('iou_thr: {}\n'.format(iou_thr))
+                out.write(f'iou track thres: {track_iou_thr}\n')
+                out.write(f'distance: {dist}\n')
+                out.write(f'impact thres {IMPACT_THRESHOLD_SCORE}\n')
+                out.write('precision: {}\n'.format(prec))
+                out.write('recall: {}\n'.format(rec))
+                out.write('f1: {}\n'.format(f1))
+                out.close()
+    print('Best metric: {}'.format(best_metric))
+    print(f'Best params: track_iou {best_iou}, distance {best_dist}')
+
+
+def grid_search_all(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, save_dir = '../../ensembling'):
+    image_size = (720, 1280)
+    dist = TRACKING_FRAMES_DISTANCE
+    best_metric = 0
+    best_iou, best_iou_wbf, best_impact_th, best_skip = 0, 0, 0, 0
+    num = 0
+    for impact_thres in impact_thres_params:
+        for skip_box_thr in skip_box_wbf_params:
+            for iou_thr in iou_wbf_params:  
+                for track_iou_thr in track_iou_params:  
+                    print(f'EXPERIMENT {num}')
+                    # combine WBF for all frames    
+                    df_combo = pd.DataFrame(columns = dfs[0].columns)
+                    df_combo = combine_preds_wbf(images, df_combo, dfs, image_size, weights, iou_thr, skip_box_thr)            
+                    print('Apply filtering after...') 
+                    df_combo = df_combo[df_combo.scores > impact_thres]
+                    print('Apply postprocessing...')  
+                    df_keepmax = keep_maximums(df_combo, iou_thresh=track_iou_thr, dist=dist)
+                    #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False) 
+                    prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=True)
+                    print(f"EXPERIMENT {num}, iou track thres {track_iou_thr}, dist {dist}, thres {impact_thres}, wbf_iou_thr {iou_thr}, skip_box_thr {skip_box_thr} \n Precision {prec}, recall {rec}, f1 {f1}")
+                    num += 1
+                    if f1 > best_metric:
+                        best_metric = f1 
+                        best_iou = track_iou_thr
+                        best_iou_wbf = iou_thr
+                        best_impact_th = impact_thres
+                        best_skip = skip_box_thr
+                        # log results
+                        out = open(f"{save_dir}/params_{num}.txt", 'w')
+                        out.write('skip_box_thr: {}\n'.format(skip_box_thr))
+                        # out.write('weights: {}\n'.format(weights))
+                        out.write('iou_thr: {}\n'.format(iou_thr))
+                        out.write(f'iou track thres: {track_iou_thr}\n')
+                        out.write(f'distance: {dist}\n')                    
+                        out.write(f'impact thres {impact_thres}\n')
+                        out.write('precision: {}\n'.format(prec))
+                        out.write('recall: {}\n'.format(rec))
+                        out.write('f1: {}\n'.format(f1))
+                        out.close()
+            print('Best metric: {}'.format(best_metric))
+            print(f'Best params: track_iou {best_iou}, best_iou_wbf {best_iou_wbf}, besk skip box {best_skip}, best impact thres {best_impact_th}')
 
 
 def combine_image_ids(dfs: list) -> list:
@@ -315,7 +408,6 @@ def grid_impact_threshold(dfs: list, gtdf: pd.DataFrame):
         # print('Combined raw preds ... \n', df_combo.head()) 
         print('Apply filtering after...') 
         df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
-        
         print('Apply postprocessing...')  
         df_keepmax = keep_maximums(df_combo, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
         # print(df_keepmax.head())
@@ -341,5 +433,6 @@ if __name__ == "__main__":
     # test and plot WBF        
     #test_wbf(images[20], dfs, weights, iou_thr, skip_box_thr)
 
-    results = grid_search_wbf(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
-    
+    #results = grid_search_wbf(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
+    #grid_search_tracking(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
+    grid_search_all(dfs, gtdf, images, weights, save_dir = '../../ensembling')
