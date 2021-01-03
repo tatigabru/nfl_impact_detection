@@ -16,21 +16,21 @@ PREDS_DIR = '../../preds'
 PREDS = [f'../../preds/densenet121_no_keepmax_fold{fold}.csv' for fold in range(4)]
 PRED_HITS = [f'../../preds/densenet121_hits_impactp01_fold{fold}.csv' for fold in range(4)]
 
-TRACKING_IOU_THRESHOLD = 0.42
-TRACKING_FRAMES_DISTANCE = 7
-IMPACT_THRESHOLD_SCORE = 0.35
+TRACKING_IOU_THRESHOLD = 0.24
+TRACKING_FRAMES_DISTANCE = 6
+IMPACT_THRESHOLD_SCORE = 0.28
 
 weights = [1, 1, 1, 1]
-iou_thr = 0.35
+iou_thr = 0.2
 skip_box_thr = 0.2
 
 best_metric = -1
 best_params = None
-skip_box_wbf_params = [0.001, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-iou_wbf_params = [0.2 + 0.05*i for i in range(6)]
+skip_box_wbf_params = [0.15 + 0.02*i for i in range(10)]
+iou_wbf_params = [0.15 + 0.05*i for i in range(6)]
 dist_params = [i for i in range(2, 10)] 
 track_iou_params = [0.15 + 0.05*i for i in range(10)]
-impact_thres_params = [0.32 + 0.02*i for i in range(10)]
+impact_thres_params = [0.22 + 0.02*i for i in range(20)]
 
 
 def show_image(im, name='image'):
@@ -207,24 +207,29 @@ def test_wbf(image_id, dfs, weights, iou_thr, skip_box_thr):
     boxes, scores, labels =  plot_wbf_image_preds(image_path, image_id, dfs, weights, iou_thr, skip_box_thr)
 
 
-def grid_search(dfs: list, images: list, weights: list, save_dir = '../../ensembling') -> dict:
+def grid_search_wbf(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, save_dir = '../../ensembling') -> dict:
     """
     Helper to find optimal WBF parameters
     """
     image_size = (720, 1280)
-    df = pd.DataFrame(columns = dfs[0].columns)
     best_metric = 0
     best_iou, best_skip = 0, 0
+    num = 0
     for skip_box_thr in skip_box_wbf_params:
-        for iou_thr in iou_wbf_params:       
-            df = combine_preds_wbf(images, df, dfs, image_size, weights, iou_thr, skip_box_thr)
-            save_path = f'{save_dir}/ens_{iou_thr}_{skip_box_thr}.csv'             
-            if os.path.isfile(save_path):
-                print('File already exists: {}. Skip'.format(save_path))
-                continue
-            df.to_csv(save_path, index=False)
-            prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=False)
-            print(f"Precision {prec}, recall {rec}, f1 {f1}")
+        for iou_thr in iou_wbf_params:  
+            num += 1 
+            print(f'EXPERIMENT {num}, iou wbf thres {iou_thr}, skip {skip_box_thr}')  
+            # combine WBF for all frames    
+            df_combo = pd.DataFrame(columns = dfs[0].columns)
+            df_combo = combine_preds_wbf(images, df_combo, dfs, image_size, weights, iou_thr, skip_box_thr)            
+            print('Apply filtering after...') 
+            df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
+            print('Apply postprocessing...')  
+            df_keepmax = keep_maximums(df_combo, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
+            #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False) 
+            prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=True)
+            print(f"EXPERIMENT {num}, thres {IMPACT_THRESHOLD_SCORE} \n Precision {prec}, recall {rec}, f1 {f1}")
+            num += 1
             if f1 > best_metric:
                 best_metric = f1 
                 best_iou = iou_thr
@@ -243,7 +248,7 @@ def grid_search(dfs: list, images: list, weights: list, save_dir = '../../ensemb
     results = {}
     results['best_f1'] = best_metric
     results['wbf_iou'] = best_iou
-    results['nest_skip'] = best_skip
+    results['best_skip'] = best_skip
 
     return results
 
@@ -259,15 +264,15 @@ def combine_image_ids(dfs: list) -> list:
     return images
 
 
-def do_test_preds():
+def do_test_preds(dfs: list, gtdf: pd.DataFrame):
     # list preds dataframes
     dfs = [pd.read_csv(preds_file) for preds_file in PREDS]
     dfs = [preprocess_df(df.copy()) for df in dfs]
     print(dfs[0].head())
     print(dfs.video.unique())
 
-    print('Apply filtering...')
-    dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]
+    #print('Apply filtering before...')
+    #dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]
     dfs = [df[df.frame > 30] for df in dfs]
     images = combine_image_ids(dfs)
     # test and plot WBF
@@ -276,10 +281,10 @@ def do_test_preds():
     
     # combine WBF for all frames
     image_size = (720, 1280)
-    df = pd.DataFrame(columns = dfs[0].columns)
-    df = combine_preds_wbf(images, df, dfs, image_size, weights, iou_thr, skip_box_thr)
-    print('Combined raw preds ... \n', df.head())    
-    #df.to_csv('../../preds/raw_preds_wbf_densenet121.csv', index = False)
+    df_combo = pd.DataFrame(columns = dfs[0].columns)
+    df_combo = combine_preds_wbf(images, df_combo, dfs, image_size, weights, iou_thr, skip_box_thr)            
+    print('Apply filtering after...') 
+    df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
 
     # apply postprocessing    
     print('Apply postprocessing...')
@@ -294,10 +299,37 @@ def do_test_preds():
     print(f"Precision {prec}, recall {rec}, f1 {f1}")
 
 
+def grid_impact_threshold(dfs: list, gtdf: pd.DataFrame):        
+    video_names = gtdf['video'].unique()
+    print('Number of videos for evaluation:', len(video_names))
+    image_size = (720, 1280)
+    num = 0
+    for IMPACT_THRESHOLD_SCORE in impact_thres_params:
+        print(f'EXPERIMENT {num}, thres {IMPACT_THRESHOLD_SCORE}')
+        #print('Apply filtering before...')
+        #dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]      
+        images = combine_image_ids(dfs)               
+        # combine WBF for all frames        
+        df_combo = pd.DataFrame(columns = dfs[0].columns)
+        df_combo = combine_preds_wbf(images, df_combo, dfs, image_size, weights, iou_thr, skip_box_thr)
+        # print('Combined raw preds ... \n', df_combo.head()) 
+        print('Apply filtering after...') 
+        df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
+        
+        print('Apply postprocessing...')  
+        df_keepmax = keep_maximums(df_combo, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
+        # print(df_keepmax.head())
+        #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False) 
+        prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=True)
+        print(f"'EXPERIMENT {num}, thres {IMPACT_THRESHOLD_SCORE} \n Precision {prec}, recall {rec}, f1 {f1}")
+        num += 1
+
+
 if __name__ == "__main__":     
     # list preds dataframes
     dfs = [pd.read_csv(preds_file) for preds_file in PRED_HITS]
     dfs = [preprocess_df(df.copy()) for df in dfs]
+    dfs = [df[df.frame > 30] for df in dfs] # remove first frames (and last)
     print(dfs[0].head())
 
     gtdf = pd.read_csv('../../preds/hits_meta.csv')
@@ -305,32 +337,9 @@ if __name__ == "__main__":
     print('Ground thruth: \n', gtdf.head())
     video_names = gtdf['video'].unique()
     print('Number of videos for evaluation:', len(video_names))
-    num = 0
-    for IMPACT_THRESHOLD_SCORE in impact_thres_params:
-        print(f'EXPERIMENT {num}, thres {IMPACT_THRESHOLD_SCORE}')
-        print('Apply filtering...')
-        #dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]
-        dfs = [df[df.frame > 30] for df in dfs] # remove first frames (and last)
+    images = combine_image_ids(dfs) 
+    # test and plot WBF        
+    #test_wbf(images[20], dfs, weights, iou_thr, skip_box_thr)
 
-        images = combine_image_ids(dfs)
-        # test and plot WBF
-        #image_id = images[20]
-        #test_wbf(image_id, dfs, weights, iou_thr, skip_box_thr)
-        
-        # combine WBF for all frames
-        image_size = (720, 1280)
-        df_combo = pd.DataFrame(columns = dfs[0].columns)
-        df_combo = combine_preds_wbf(images, df_combo, dfs, image_size, weights, iou_thr, skip_box_thr)
-        # print('Combined raw preds ... \n', df_combo.head()) 
-        #df.to_csv('../../preds/raw_preds_wbf_densenet121.csv', index = False)
-        print('Apply filtering after...') 
-        df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
-        # apply postprocessing 
-        print('Apply postprocessing...')  
-        df_keepmax = keep_maximums(df_combo, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
-        # print(df_keepmax.head())
-        #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False) 
-
-        prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=True)
-        print(f"'EXPERIMENT {num}, thres {IMPACT_THRESHOLD_SCORE} \n Precision {prec}, recall {rec}, f1 {f1}")
-        num += 1
+    results = grid_search_wbf(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
+    
