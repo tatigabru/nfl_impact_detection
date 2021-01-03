@@ -140,11 +140,8 @@ def evaluate_boxes(gt_data, pred_data, impact=True, iou_thresh=0.35):
     tp = np.sum(ftp)
     fp = np.sum(ffp)
     fn = np.sum(ffn)
-    precision = tp / (tp + fp + 1e-6)
-    recall =  tp / (tp + fn +1e-6)
-    f1_score = 2*(precision*recall)/(precision+recall+1e-6)
-    print(f'TP: {tp}, FP: {fp}, FN: {fn}, PRECISION: {precision:.4f}, RECALL: {recall:.4f}, F1 SCORE: {f1_score}')
-    return precision, recall, f1_score
+    
+    return tp, fp, fn
 
 
 def get_data_by_video(df):
@@ -184,10 +181,14 @@ def evaluate_df(gtdf, preddf, video_names=None, impact=True, iou_thresh=0.35):
     if video_names is None:
         video_names = preddf['video'].unique()
     # add FNs for videos not predicted
-    gt_videos = gtdf['video'].unique()
-    missed = 
-    video_names
-
+    gt_videos = set(gtdf['video'].unique())
+    pred_videos = set(preddf['video'].unique())
+    diff = gt_videos - pred_videos
+    print(diff)
+    missed = gtdf[gtdf['video'].isin(diff)]
+    fn_missed = missed.frame.count()
+    print(f'fn_missed: {fn_missed}')
+    # evaluate common videos
     gtdf = gtdf[gtdf['video'].isin(video_names)]
     preddf = preddf[preddf['video'].isin(video_names)]
     print('Number of ground truth labels:', len(gtdf))
@@ -197,12 +198,18 @@ def evaluate_df(gtdf, preddf, video_names=None, impact=True, iou_thresh=0.35):
     if impact:
         gt_data = get_data_by_video(gtdf)
         pred_data = get_data_by_video(preddf)
-        prec, rec, f1 = evaluate_boxes(gt_data, pred_data, impact=True, iou_thresh=0.35)
+        tp, fp, fn = evaluate_boxes(gt_data, pred_data, impact=True, iou_thresh=0.35)
     else:
         gt_data = get_data_by_video_frame(gtdf)
         pred_data = get_data_by_video_frame(preddf)
-        prec, rec, f1 = evaluate_boxes(gt_data, pred_data, impact=False, iou_thresh=iou_thresh)
-    return prec, rec, f1
+        tp, fp, fn = evaluate_boxes(gt_data, pred_data, impact=False, iou_thresh=iou_thresh)
+    fn += fn_missed
+    precision = tp / (tp + fp + 1e-6)
+    recall =  tp / (tp + fn +1e-6)
+    f1_score = 2*(precision*recall)/(precision+recall+1e-6)
+    print(f'TP: {tp}, FP: {fp}, FN: {fn}, PRECISION: {precision:.4f}, RECALL: {recall:.4f}, F1 SCORE: {f1_score}')
+
+    return precision, recall, f1_score
 
 
 if __name__ == '__main__':
