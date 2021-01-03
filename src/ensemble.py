@@ -14,19 +14,23 @@ from postprocessing import keep_maximums
 BOX_COLOR = (0, 255, 255)
 PREDS_DIR = '../../preds'
 PREDS = [f'../../preds/densenet121_no_keepmax_fold{fold}.csv' for fold in range(4)]
+PRED_HITS = [f'../../preds/densenet121_hits_impactp01_fold{fold}.csv' for fold in range(4)]
 
-TRACKING_IOU_THRESHOLD = 0.3
-TRACKING_FRAMES_DISTANCE = 11
-IMPACT_THRESHOLD_SCORE = 0.4
+TRACKING_IOU_THRESHOLD = 0.42
+TRACKING_FRAMES_DISTANCE = 7
+IMPACT_THRESHOLD_SCORE = 0.35
 
 weights = [1, 1, 1, 1]
-iou_thr = 0.5
+iou_thr = 0.35
 skip_box_thr = 0.2
 
 best_metric = -1
 best_params = None
-thresh_params = [0.001, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-#iou_params = np.arange(0.3, 0.95, 0.05) 
+skip_box_wbf_params = [0.001, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+iou_wbf_params = [0.2 + 0.05*i for i in range(6)]
+dist_params = [i for i in range(2, 10)] 
+track_iou_params = [0.15 + 0.05*i for i in range(10)]
+impact_thres_params = [0.32 + 0.02*i for i in range(10)]
 
 
 def show_image(im, name='image'):
@@ -35,23 +39,21 @@ def show_image(im, name='image'):
     cv2.destroyAllWindows()
 
 
-def show_boxes(image, boxes_list, scores_list, labels_list, image_size=(720, 1280)):
+def show_boxes(image, image_id, boxes_list, scores_list, labels_list, image_size=(720, 1280)):
     thickness = 1
-    colors_to_use = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255), (255, 0, 255), (255, 255, 0), (0, 0, 0)]
-    color_list = gen_color_list(len(boxes_list), len(labels_list))
+    colors_to_use = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255), (255, 0, 255), (255, 255, 0), (125, 125, 125), (206, 116, 112)]
     for i in range(len(boxes_list)):
         for j in range(len(boxes_list[i])):
             x1 = int(image_size[1] * boxes_list[i][j][0])
             y1 = int(image_size[0] * boxes_list[i][j][1])
             x2 = int(image_size[1] * boxes_list[i][j][2])
             y2 = int(image_size[0] * boxes_list[i][j][3])
-            lbl = labels_list[i]
             cv2.rectangle(image, (x1, y1), (x2, y2), colors_to_use[i], int(thickness))
-    #plt.figure(figsize=(12,6))        
-    #plt.imshow(image) 
-    #plt.savefig(f'../../output/{image_id}_bboxes.png')
-    #plt.show()
-    show_image(image)
+    plt.figure(figsize=(12,6))        
+    plt.imshow(image) 
+    plt.savefig(f'../../ensembling/{image_id}_bboxes.png')
+    plt.show()
+    #show_image(image)
 
 
 def gen_color_list(model_num, labels_num):
@@ -127,15 +129,15 @@ def plot_wbf_image_preds(image_path: str, image_id: str, dfs, weights, iou_thr, 
     # plot all bboxes
     image = cv2.imread(image_path, cv2.IMREAD_COLOR).astype(np.float32)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
-    show_boxes(image.copy(), boxes_list, scores_list, labels_list)
+    show_boxes(image.copy(), image_id[:-4] + '_raw', boxes_list, scores_list, labels_list)
     # print(boxes_list, scores_list, labels_list)
     boxes, scores, labels = weighted_boxes_fusion(boxes_list, scores_list, labels_list, weights=weights, iou_thr=iou_thr, skip_box_thr=skip_box_thr)
     print(f'wbf boxes: {boxes} \n wbf scores: {scores} \n wbf labels: {labels}') 
-    show_boxes(image.copy(), [boxes], [scores], [labels.astype(np.int32)])
+    show_boxes(image.copy(), image_id[:-4] + '_wbf', [boxes], [scores], [labels.astype(np.int32)])
     return boxes, scores, labels
 
 
-def preprocess_df(df):
+def preprocess_df(df: pd.DataFrame) -> pd.DataFrame:
     df['label'] = 1
     df['image_name'] = df['video'].str.replace('.mp4', '') + '_' + df['frame'].astype(str) + '.png'
     df["right"] = df["left"] + df["width"]
@@ -143,17 +145,28 @@ def preprocess_df(df):
     return df
 
 
-def add_bottom_right(df):
+def add_bottom_right(df: pd.DataFrame) -> pd.DataFrame:
     df['right'] = df['left'] + df['width']
     df['bottom'] = df['top'] + df['height']
     return df
 
 
-def combine_preds_wbf(images: list, df: pd.DataFrame, dfs, image_size, weights, iou_thr, skip_box_thr):
+def add_width_height(df: pd.DataFrame) -> pd.DataFrame:
+    df['width'] = df['right'] - df['left']
+    df['height'] = df['bottom'] - df['top'] 
+    return df
+
+
+def combine_preds_wbf(images: list, df: pd.DataFrame, dfs, image_size, weights, iou_thr, skip_box_thr) -> pd.DataFrame:
     row = 0
     for image_id in images:
-        gameKey, playID, view, frame = image_id.split('_')[:4]
-        video = f'{gameKey}_{playID}_{view}.mp4'
+        # for youtube dataset
+        gameKey, playID, view = 0, 0, 0
+        video, frame =  image_id.split('_')
+        video = video + '.mp4'    
+        # for test dataset    
+        # gameKey, playID, view, frame = image_id.split('_')[:4]
+        # video = f'{gameKey}_{playID}_{view}.mp4'
         boxes, scores, labels = wbf_image_preds(image_id, dfs, weights, iou_thr, skip_box_thr)
         for (x1, y1, x2, y2), score, label in zip(boxes, scores, labels):
             df.loc[row,"gameKey"] = gameKey
@@ -171,7 +184,6 @@ def combine_preds_wbf(images: list, df: pd.DataFrame, dfs, image_size, weights, 
             df.loc[row,"label"] = label 
             df.loc[row,"image_name"] = image_id 
             row += 1
-
     return df
 
 
@@ -190,19 +202,21 @@ def test_wbf(image_id, dfs, weights, iou_thr, skip_box_thr):
     print(f'image_id: {image_id}')
     boxes, scores, labels = wbf_image_preds(image_id, dfs, weights, iou_thr, skip_box_thr)
     print(f'wbf boxes: {boxes} \n wbf scores: {scores} \n wbf labels: {labels}') 
-    image_path = f'../../data/test_preds/labeled_{image_id}'
+    # image_path = f'../../data/test_preds/labeled_{image_id}'
+    image_path = f'../../data/hits_images/{image_id}'
     boxes, scores, labels =  plot_wbf_image_preds(image_path, image_id, dfs, weights, iou_thr, skip_box_thr)
 
 
-def grid_search(dfs, images, weights):
+def grid_search(dfs: list, images: list, weights: list, save_dir = '../../ensembling') -> dict:
     """
     Helper to find optimal WBF parameters
     """
     image_size = (720, 1280)
     df = pd.DataFrame(columns = dfs[0].columns)
     best_metric = 0
-    for skip_box_thr in thresh_params:
-        for iou_thr in iou_params:        
+    best_iou, best_skip = 0, 0
+    for skip_box_thr in skip_box_wbf_params:
+        for iou_thr in iou_wbf_params:       
             df = combine_preds_wbf(images, df, dfs, image_size, weights, iou_thr, skip_box_thr)
             save_path = f'{save_dir}/ens_{iou_thr}_{skip_box_thr}.csv'             
             if os.path.isfile(save_path):
@@ -225,16 +239,16 @@ def grid_search(dfs, images, weights):
                 out.write('{}\n'.format(f1))
                 out.close()
     print('Best metric: {}'.format(best_metric))
-    print('Best params: {}'.format(best_params))
+    print(f'Best params: wbf_iou {best_iou}, skip threshold {best_skip}')
+    results = {}
+    results['best_f1'] = best_metric
+    results['wbf_iou'] = best_iou
+    results['nest_skip'] = best_skip
+
+    return results
 
 
-
-if __name__ == "__main__":     
-    # list preds dataframes
-    dfs = [pd.read_csv(preds_file) for preds_file in PREDS]
-    dfs = [preprocess_df(df.copy()) for df in dfs]
-    print(dfs[0].head())
-        
+def combine_image_ids(dfs: list) -> list:
     # Accumulate all image_ids for all predictions
     images = set()
     for df in dfs:
@@ -242,25 +256,36 @@ if __name__ == "__main__":
         images = images.union(image_ids)
     images = list(sorted(images))
     print(len(images), images[:5])
+    return images
 
+
+def do_test_preds():
+    # list preds dataframes
+    dfs = [pd.read_csv(preds_file) for preds_file in PREDS]
+    dfs = [preprocess_df(df.copy()) for df in dfs]
+    print(dfs[0].head())
+    print(dfs.video.unique())
+
+    print('Apply filtering...')
+    dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]
+    dfs = [df[df.frame > 30] for df in dfs]
+    images = combine_image_ids(dfs)
     # test and plot WBF
-    image_id = images[2]
+    image_id = images[20]
     test_wbf(image_id, dfs, weights, iou_thr, skip_box_thr)
     
     # combine WBF for all frames
     image_size = (720, 1280)
     df = pd.DataFrame(columns = dfs[0].columns)
     df = combine_preds_wbf(images, df, dfs, image_size, weights, iou_thr, skip_box_thr)
-    print(df.head())
-    print(df.info())        
-    df.to_csv('../../preds/raw_preds_wbf_densenet121.csv', index = False)
+    print('Combined raw preds ... \n', df.head())    
+    #df.to_csv('../../preds/raw_preds_wbf_densenet121.csv', index = False)
 
     # apply postprocessing    
-    filtered = df[df.scores > IMPACT_THRESHOLD_SCORE]
-    df_keepmax = keep_maximums(filtered, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
+    print('Apply postprocessing...')
+    df_keepmax = keep_maximums(df, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
     print(df_keepmax.head())
-    print(df_keepmax.info()) 
-    df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False)
+    #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False)
 
     gtdf = pd.read_csv('../../preds/test_densenet121_corrected.csv')
     video_names = df_keepmax['video'].unique()
@@ -268,3 +293,44 @@ if __name__ == "__main__":
     prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=True)
     print(f"Precision {prec}, recall {rec}, f1 {f1}")
 
+
+if __name__ == "__main__":     
+    # list preds dataframes
+    dfs = [pd.read_csv(preds_file) for preds_file in PRED_HITS]
+    dfs = [preprocess_df(df.copy()) for df in dfs]
+    print(dfs[0].head())
+
+    gtdf = pd.read_csv('../../preds/hits_meta.csv')
+    gtdf = add_width_height(gtdf)
+    print('Ground thruth: \n', gtdf.head())
+    video_names = gtdf['video'].unique()
+    print('Number of videos for evaluation:', len(video_names))
+    num = 0
+    for IMPACT_THRESHOLD_SCORE in impact_thres_params:
+        print(f'EXPERIMENT {num}, thres {IMPACT_THRESHOLD_SCORE}')
+        print('Apply filtering...')
+        #dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]
+        dfs = [df[df.frame > 30] for df in dfs] # remove first frames (and last)
+
+        images = combine_image_ids(dfs)
+        # test and plot WBF
+        #image_id = images[20]
+        #test_wbf(image_id, dfs, weights, iou_thr, skip_box_thr)
+        
+        # combine WBF for all frames
+        image_size = (720, 1280)
+        df_combo = pd.DataFrame(columns = dfs[0].columns)
+        df_combo = combine_preds_wbf(images, df_combo, dfs, image_size, weights, iou_thr, skip_box_thr)
+        # print('Combined raw preds ... \n', df_combo.head()) 
+        #df.to_csv('../../preds/raw_preds_wbf_densenet121.csv', index = False)
+        print('Apply filtering after...') 
+        df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
+        # apply postprocessing 
+        print('Apply postprocessing...')  
+        df_keepmax = keep_maximums(df_combo, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
+        # print(df_keepmax.head())
+        #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False) 
+
+        prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=True)
+        print(f"'EXPERIMENT {num}, thres {IMPACT_THRESHOLD_SCORE} \n Precision {prec}, recall {rec}, f1 {f1}")
+        num += 1

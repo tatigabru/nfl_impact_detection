@@ -183,6 +183,11 @@ def evaluate_df(gtdf, preddf, video_names=None, impact=True, iou_thresh=0.35):
     """
     if video_names is None:
         video_names = preddf['video'].unique()
+    # add FNs for videos not predicted
+    gt_videos = gtdf['video'].unique()
+    missed = 
+    video_names
+
     gtdf = gtdf[gtdf['video'].isin(video_names)]
     preddf = preddf[preddf['video'].isin(video_names)]
     print('Number of ground truth labels:', len(gtdf))

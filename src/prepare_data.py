@@ -146,7 +146,7 @@ def make_youtube_frames(video_dir = '../../data/youtube', video_name = 'nfl_helm
 
 
 if __name__ == "__main__":  
-    make_test()  
+    #make_test()  
     
 
     #video_name = out_dir + 'hit4457.mp4'  
@@ -154,3 +154,11 @@ if __name__ == "__main__":
     
     #df = create_meta_nfl_helmets_hits()
     #df.to_csv( out_dir + 'hits_meta.csv', index=False)
+
+    video_dir = '../../data/hits_videos'
+    uniq_video = os.listdir(video_dir)
+    print(uniq_video)
+    out_dir = '../../data/hits_images/'
+    os.makedirs(out_dir, exist_ok=True)
+    for video_name in uniq_video:
+        make_images_from_video(video_name, video_dir, out_dir)

@@ -70,7 +70,7 @@ def track_boxes(videodf, dist=1, iou_thresh=0.8):
                     box2 = ind2box[ind2]
                     a = box_pair_iou(box1, box2)
                     ###
-                    print(f'IoU boxes: {a}')
+                    # print(f'IoU boxes: {a}')
                     ###
                     cost_matrix[i, j] = 1 - a if a > iou_thresh else 1
             row_is, col_js = linear_sum_assignment(cost_matrix)
@@ -85,7 +85,7 @@ def track_boxes(videodf, dist=1, iou_thresh=0.8):
             ind2track[ind] = track
             track += 1
     tracks = [ind2track[ind] for ind in inds]
-    print(f'tracks: {tracks}')
+    # print(f'tracks: {tracks}')
     return tracks
 
 
@@ -94,9 +94,8 @@ def add_tracking(df, dist=1, iou_thresh=0.8) -> pd.DataFrame:
     df = add_bottom_right(df)
     df["track"] = -1
     videos = df["video"].unique()
-
     for video in videos:
-        print(f'Video: {video}')
+        # print(f'Video: {video}')
         videodf = df[df["video"] == video]
         tracks = track_boxes(videodf, dist=dist, iou_thresh=iou_thresh)
         df.loc[list(videodf.index), "track"] = tracks
@@ -136,7 +135,7 @@ def test_keep_maximums(df, iou_thresh=0.35, dist=2):
 
     """
     df_new = keep_maximums(df, iou_thresh=iou_thresh, dist=dist) 
-    print(f'Processed dataframe: \n{df_new.head()}')
+    print(f'Processed dataframe: \n{df_new.head(10)}')
     # check we have left 3 tracks
     if df_new.track.count() != 3: 
         print(f'Not right tracks, {df_new.track.values}')
@@ -152,9 +151,9 @@ if __name__ == "__main__":
         print(f'\n EXPERIMENT {num}: distance = {dist}, IoU thres = {iou_thresh}')
         test_keep_maximums(df, iou_thresh=iou_thresh, dist=dist)
 
-    #dist = 4
-    #iou_threshholds = [0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
-    #for iou_thresh in iou_threshholds:
-    #    num += 1
-    #    print(f'\n EXPERIMENT {num}: distance = {dist}, IoU thres = {iou_thresh}')
-    #    test_keep_maximums(df, iou_thresh=iou_thresh, dist=dist)
+    dist = 4
+    iou_threshholds = [0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
+    for iou_thresh in iou_threshholds:
+        num += 1
+        print(f'\n EXPERIMENT {num}: distance = {dist}, IoU thres = {iou_thresh}')
+        test_keep_maximums(df, iou_thresh=iou_thresh, dist=dist)
