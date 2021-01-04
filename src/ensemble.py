@@ -39,7 +39,7 @@ PRED_HITS = [f'../../preds/densenet121_hits_impactp01_fold{fold}.csv' for fold i
 
 TRACKING_IOU_THRESHOLD = 0.24
 TRACKING_FRAMES_DISTANCE = 9
-IMPACT_THRESHOLD_SCORE = 0.28
+IMPACT_THRESHOLD_SCORE = 0.35
 
 weights = [1, 1]
 iou_thr = 0.2
@@ -51,7 +51,7 @@ skip_box_wbf_params = [0.13 + 0.02*i for i in range(10)]
 iou_wbf_params = [0.15 + 0.05*i for i in range(5)]
 dist_params = [i for i in range(2, 10)] 
 track_iou_params = [0.15 + 0.05*i for i in range(6)]
-impact_thres_params = [0.20 + 0.05*i for i in range(7)]
+impact_thres_params = [0.31 + 0.01*i for i in range(8)]
 
 
 def show_image(im, name='image'):
@@ -447,7 +447,7 @@ if __name__ == "__main__":
     #test_wbf(images[20], dfs, weights, iou_thr, skip_box_thr)
 
     #do_val_preds(dfs, gtdf)
-    grid_impact_threshold(dfs, gtdf)
-    results = grid_search_wbf(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
+   # grid_impact_threshold(dfs, gtdf)
+   # results = grid_search_wbf(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
     grid_search_tracking(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
     #grid_search_all(dfs, gtdf, images, weights, save_dir = '../../ensembling')
