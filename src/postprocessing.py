@@ -21,6 +21,24 @@ def add_bottom_right(df):
     return df
 
 
+def box_pair_distance(bbox1, bbox2):
+    bbox1 = [float(x) for x in bbox1]
+    bbox2 = [float(x) for x in bbox2]
+
+    (x0_1, y0_1, x1_1, y1_1) = bbox1
+    (x0_2, y0_2, x1_2, y1_2) = bbox2
+
+    x_1 = (x1_1 + x0_1)/2
+    x_2 = (x1_2 + x0_2)/2
+    y_1 = (y1_1 + y0_1)/2
+    y_2 = (y1_2 + y0_2)/2
+    print(x_1, x_2, y_1, y_2)
+    # get Eucledian distance
+    dist = (x_2 - x_1)**2 + (y_2 - y_1)**2
+    print(np.sqrt(dist))
+
+    return np.sqrt(dist)
+
 def box_pair_iou(bbox1, bbox2):
     bbox1 = [float(x) for x in bbox1]
     bbox2 = [float(x) for x in bbox2]
@@ -45,26 +63,6 @@ def box_pair_iou(bbox1, bbox2):
     size_union = size_1 + size_2 - size_intersection
 
     return size_intersection / size_union
-
-
-def box_pair_distance(bbox1, bbox2):
-    bbox1 = [float(x) for x in bbox1]
-    bbox2 = [float(x) for x in bbox2]
-
-    (x0_1, y0_1, x1_1, y1_1) = bbox1
-    (x0_2, y0_2, x1_2, y1_2) = bbox2
-
-    # get centers of bboxes
-    x_1 = (x0_1 + x1_1)/2
-    y_1 = (y0_1 + y1_1)/2
-    x_2 = (x0_2 + x1_2/2
-    y_2 = (y0_2 + y1_2)/2
-    print(x_1, x_2, y_1, y_2)
-    # get Eucledian distance
-    dist = (x_2 - x_1)**2 + (y_2 - y_1)**2
-    print(dist)
-
-    return np.sqrt(dist)
 
 
 def track_boxes_centers(videodf, dist=1, dist_thresh=0.8):
@@ -175,7 +173,7 @@ def add_tracking_centers(df, dist=1, dist_thresh=0.8) -> pd.DataFrame:
     for video in videos:
         # print(f'Video: {video}')
         videodf = df[df["video"] == video]
-        track_boxes_centers(videodf, dist=dist, dist_thresh=dist_thresh)
+        tracks = track_boxes_centers(videodf, dist=dist, dist_thresh=dist_thresh)
         df.loc[list(videodf.index), "track"] = tracks
     return df
 
@@ -189,7 +187,7 @@ def keep_maximums(df, iou_thresh=0.35, dist=2) -> pd.DataFrame:
 
 def keep_maximums_cent(df, dist_thresh=0.35, dist=2) -> pd.DataFrame:
     # track boxes across frames and keep only box with maximum score
-    df = add_tracking(df, dist=dist, dist_thresh=dist_thresh)
+    df = add_tracking_centers(df, dist=dist, dist_thresh=dist_thresh)
     df = df.sort_values(["video", "track", "scores"], ascending=False).drop_duplicates(["video", "track"])
     return df
 
@@ -258,15 +256,15 @@ if __name__ == "__main__":
     print(f'Initial dataframe: \n{df.head(11)}')
 
     dist = 7
+    num = 0
     dist_threshholds = [2, 4, 6, 8, 10, 13, 16, 20]
     for dist_thresh in dist_threshholds:
         num += 1
-        print(f'\n EXPERIMENT {num}: distance = {dist}, IoU thres = {iou_thresh}')
+        print(f'\n EXPERIMENT {num}: distance = {dist}, dist thres = {dist_thresh}')
         test_centers_track(df, dist_thresh=dist_thresh, dist=dist)
 
-   # dist = 7
-   # iou_threshholds = [0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
-   # for iou_thresh in iou_threshholds:
-   #     num += 1
-   #     print(f'\n EXPERIMENT {num}: distance = {dist}, IoU thres = {iou_thresh}')
-   #     test_keep_maximums(df, iou_thresh=iou_thresh, dist=dist)
+    #iou_threshholds = [0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
+    #for iou_thresh in iou_threshholds:
+    #    num += 1
+    #    print(f'\n EXPERIMENT {num}: distance = {dist}, IoU thres = {iou_thresh}')
+    #    test_keep_maximums(df, iou_thresh=iou_thresh, dist=dist)

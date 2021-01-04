@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 from evaluate import evaluate_df
 # from pytorch_toolbelt.utils import image_to_tensor, fs, to_numpy, rgb_image_from_tensor
 from ensemble_boxes import nms, soft_nms, weighted_boxes_fusion, non_maximum_weighted
-from postprocessing import keep_maximums
+from postprocessing import keep_maximums, keep_maximums_cent
 
 BOX_COLOR = (0, 255, 255)
 
@@ -37,9 +37,10 @@ MIX = ['../../preds/3dnn_predictions_fold0.csv',
 PREDS = [f'../../preds/densenet121_no_keepmax_fold{fold}.csv' for fold in range(4)]
 PRED_HITS = [f'../../preds/densenet121_hits_impactp01_fold{fold}.csv' for fold in range(4)]
 
-TRACKING_IOU_THRESHOLD = 0.24
+TRACKING_IOU_THRESHOLD = 0.2
 TRACKING_FRAMES_DISTANCE = 9
 IMPACT_THRESHOLD_SCORE = 0.35
+TRACKING_DIST_THRESHOLD = 10
 
 weights = [1, 1]
 iou_thr = 0.2
@@ -396,6 +397,7 @@ def do_val_preds(dfs, gtdf: pd.DataFrame):
     df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
     # apply postprocessing    
     print('Apply postprocessing...')
+   # df_keepmax = keep_maximums_cent(df_combo, dist_thresh=TRACKING_DIST_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
     df_keepmax = keep_maximums(df_combo, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
     #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False)
     video_names = gtdf['video'].unique()
@@ -448,8 +450,8 @@ if __name__ == "__main__":
     # test and plot WBF        
     #test_wbf(images[20], dfs, weights, iou_thr, skip_box_thr)
 
-    #do_val_preds(dfs, gtdf)
+    do_val_preds(dfs, gtdf)
    # grid_impact_threshold(dfs, gtdf)
    # results = grid_search_wbf(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
-    grid_search_tracking(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
+   # grid_search_tracking(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
     #grid_search_all(dfs, gtdf, images, weights, save_dir = '../../ensembling')
