@@ -1,0 +1,28 @@
+dencenet121 + Nastya3dnn
+
+filtering after WBF
+TRACKING_IOU_THRESHOLD = 0.24
+TRACKING_FRAMES_DISTANCE = 9
+IMPACT_THRESHOLD_SCORE = 0.28
+
+weights = [1, 1]
+iou_thr = 0.2
+skip_box_thr = 0.16
+
+
+print('Apply filtering after...')
+TP: 257, FP: 308, FN: 209, PRECISION: 0.4549, RECALL: 0.5515, F1 SCORE: 0.49854460548648843
+Precision 0.45486725583209336, recall 0.5515021447392657, f1 0.49854460548648843
+
+same, but with filter
+dfs = [df[df.frame > 30] for df in dfs] # remove first frames (and last)
+TP: 257, FP: 306, FN: 209, PRECISION: 0.4565, RECALL: 0.5515, F1 SCORE: 0.4995135948235104
+Precision 0.4564831252993195, recall 0.5515021447392657, f1 0.4995135948235104
+
+
+print('Apply filtering before...')
+dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]
+dfs = [df[df.frame > 30] for df in dfs]
+TP: 303, FP: 1259, FN: 163, PRECISION: 0.1940, RECALL: 0.6502, F1 SCORE: 0.298816213787479
+Precision 0.19398207413957613, recall 0.6502145908793678, f1 0.298816213787479
+
