@@ -47,11 +47,11 @@ skip_box_thr = 0.16
 
 best_metric = -1
 best_params = None
-skip_box_wbf_params = [0.13 + 0.01*i for i in range(10)]
+skip_box_wbf_params = [0.13 + 0.02*i for i in range(10)]
 iou_wbf_params = [0.15 + 0.05*i for i in range(5)]
 dist_params = [i for i in range(2, 10)] 
 track_iou_params = [0.15 + 0.05*i for i in range(6)]
-impact_thres_params = [0.20 + 0.02*i for i in range(9)]
+impact_thres_params = [0.20 + 0.05*i for i in range(7)]
 
 
 def show_image(im, name='image'):
@@ -381,11 +381,10 @@ def combine_image_ids(dfs) -> list:
 def do_val_preds(dfs, gtdf: pd.DataFrame):
     # list preds dataframes
     dfs = [pd.read_csv(preds_file) for preds_file in MIX]
-    dfs = [preprocess_df(df.copy()) for df in dfs]
-    
+    dfs = [preprocess_df(df.copy()) for df in dfs]    
     #print('Apply filtering before...')
     #dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]
-    dfs = [df[df.frame > 30] for df in dfs]
+    #dfs = [df[df.frame > 30] for df in dfs]
     images = combine_image_ids(dfs)
     # combine WBF for all frames
     image_size = (720, 1280)
@@ -393,11 +392,9 @@ def do_val_preds(dfs, gtdf: pd.DataFrame):
     df_combo = combine_preds_wbf(images, df_combo, dfs, image_size, weights, iou_thr, skip_box_thr)            
     print('Apply filtering after...') 
     df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
-
     # apply postprocessing    
     print('Apply postprocessing...')
     df_keepmax = keep_maximums(df_combo, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
-    #print(df_keepmax.head())
     #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False)
     video_names = gtdf['video'].unique()
     pred_video = df_keepmax['video'].unique()
@@ -413,21 +410,20 @@ def grid_impact_threshold(dfs, gtdf: pd.DataFrame):
     num = 0
     for impact_thres in impact_thres_params:
         print(f'EXPERIMENT {num}, thres {impact_thres}')
-        #print('Apply filtering before...')
-        #dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]      
-        images = combine_image_ids(dfs)               
+       # print('Apply filtering before...')
+       # dfs = [df[df.scores > impact_thres] for df in dfs]      
+       # images = combine_image_ids(dfs)               
         # combine WBF for all frames  
         print('Combined raw preds...')      
         df_combo = pd.DataFrame(columns = dfs[0].columns)
         df_combo = combine_preds_wbf(images, df_combo, dfs, image_size, weights, iou_thr, skip_box_thr)
         print('Apply filtering after...') 
-        df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
+        df_combo = df_combo[df_combo.scores > impact_thres]
         print('Apply postprocessing...')  
         df_keepmax = keep_maximums(df_combo, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
-        # print(df_keepmax.head())
-        #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False) 
+        
         prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=True)
-        print(f"'EXPERIMENT {num}, thres {IMPACT_THRESHOLD_SCORE} \n Precision {prec}, recall {rec}, f1 {f1}")
+        print(f"'EXPERIMENT {num}, thres {impact_thres} \n Precision {prec}, recall {rec}, f1 {f1}")
         num += 1
 
 
@@ -435,7 +431,7 @@ if __name__ == "__main__":
     # list preds dataframes
     dfs = [pd.read_csv(preds_file) for preds_file in MIX]
     dfs = [preprocess_df(df.copy()) for df in dfs]
-   # dfs = [df[df.frame > 30] for df in dfs] # remove first frames (and last)
+    dfs = [df[df.frame > 30] for df in dfs] # remove first frames (and last)
     print(dfs[1].head())
 
    # gtdf = pd.read_csv('../../preds/hits_meta.csv')
@@ -450,8 +446,8 @@ if __name__ == "__main__":
     # test and plot WBF        
     #test_wbf(images[20], dfs, weights, iou_thr, skip_box_thr)
 
-    do_val_preds(dfs, gtdf)
+    #do_val_preds(dfs, gtdf)
     grid_impact_threshold(dfs, gtdf)
-    #results = grid_search_wbf(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
-    #grid_search_tracking(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
+    results = grid_search_wbf(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
+    grid_search_tracking(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
     #grid_search_all(dfs, gtdf, images, weights, save_dir = '../../ensembling')
