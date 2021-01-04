@@ -61,7 +61,6 @@ Keep maximums
 TRACKING_IOU_THRESHOLD = 0.2
 TRACKING_FRAMES_DISTANCE = 9
 IMPACT_THRESHOLD_SCORE = 0.35
-TRACKING_DIST_THRESHOLD = 10
 weights = [1, 1]
 iou_thr = 0.2
 skip_box_thr = 0.16
@@ -69,4 +68,48 @@ skip_box_thr = 0.16
 TP: 221, FP: 167, FN: 245, PRECISION: 0.5696, RECALL: 0.4742, F1 SCORE: 0.5175639057697164
 Precision 0.5695876273979701, recall 0.47424892602092505, f1 0.5175639057697164
 
+TRACKING_IOU_THRESHOLD = 0.2
+TRACKING_FRAMES_DISTANCE = 7
+IMPACT_THRESHOLD_SCORE = 0.33
+weights = [1, 1]
+iou_thr = 0.2
+skip_box_thr = 0.17
+EXPERIMENT 3, thres 0.33 
+ Precision 0.5505882339986159, recall 0.5021459216692148, f1 0.5252520251327041
+Current best metric: 0.5252520251327041
 
+
+3 models
+MIX = ['../../preds/3dnn_predictions_fold0.csv',
+       '../../preds/densenet121_val_impactp01_fold0.csv',
+       '../../preds/b5_val_impactp01_fold0.csv']
+TRACKING_IOU_THRESHOLD = 0.2
+TRACKING_FRAMES_DISTANCE = 7
+IMPACT_THRESHOLD_SCORE = 0.33
+TRACKING_DIST_THRESHOLD = 10
+
+weights = [6, 5, 4]
+iou_thr = 0.2
+skip_box_thr = 0.17
+TP: 173, FP: 60, FN: 293, PRECISION: 0.7425, RECALL: 0.3712, F1 SCORE: 0.4949924010638433
+Precision 0.7424892671996169, recall 0.37124463439647076, f1 0.4949924010638433
+
+3 models
+MIX = ['../../preds/3dnn_predictions_fold0.csv',
+       '../../preds/densenet121_val_impactp01_fold0.csv',
+       '../../preds/b5_val_impactp01_fold0.csv']
+TRACKING_IOU_THRESHOLD = 0.2
+TRACKING_FRAMES_DISTANCE = 7
+IMPACT_THRESHOLD_SCORE = 0.33
+TRACKING_DIST_THRESHOLD = 10
+weights = [6, 5, 4]
+iou_thr = 0.2
+skip_box_thr = 0.17
+
+Thres before and after
+TP: 157, FP: 53, FN: 309, PRECISION: 0.7476, RECALL: 0.3369, F1 SCORE: 0.464496611752434
+Precision 0.747619044058957, recall 0.33690987052165267, f1 0.464496611752434
+
+weights = [1, 1, 1]
+TP: 154, FP: 50, FN: 312, PRECISION: 0.7549, RECALL: 0.3305, F1 SCORE: 0.45970106762346846
+Precision 0.7549019570838139, recall 0.33047210229512425, f1 0.45970106762346846
