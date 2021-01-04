@@ -12,7 +12,28 @@ from ensemble_boxes import nms, soft_nms, weighted_boxes_fusion, non_maximum_wei
 from postprocessing import keep_maximums
 
 BOX_COLOR = (0, 255, 255)
+
+FOLD0 = ['57584_002674_Endzone.mp4', '57584_002674_Sideline.mp4',
+ '57586_001934_Endzone.mp4', '57586_001934_Sideline.mp4',
+ '57594_000923_Endzone.mp4', '57594_000923_Sideline.mp4',
+ '57680_002206_Endzone.mp4', '57680_002206_Sideline.mp4',
+ '57686_002546_Endzone.mp4', '57686_002546_Sideline.mp4',
+ '57784_001741_Endzone.mp4', '57784_001741_Sideline.mp4',
+ '57787_003413_Endzone.mp4', '57787_003413_Sideline.mp4',
+ '57904_001367_Endzone.mp4', '57904_001367_Sideline.mp4',
+ '57912_001325_Endzone.mp4', '57912_001325_Sideline.mp4',
+ '57913_000218_Endzone.mp4', '57913_000218_Sideline.mp4',
+ '57992_000350_Endzone.mp4', '57992_000350_Sideline.mp4',
+ '58005_001254_Endzone.mp4', '58005_001254_Sideline.mp4',
+ '58005_001612_Endzone.mp4', '58005_001612_Sideline.mp4',
+ '58048_000086_Endzone.mp4', '58048_000086_Sideline.mp4',
+ '58102_002798_Endzone.mp4', '58102_002798_Sideline.mp4']
+
 PREDS_DIR = '../../preds'
+MIX = ['../../preds/3dnn_predictions_fold0.csv',
+       '../../preds/densenet121_val_impactp01_fold0.csv',]
+      # '../../preds/densenet201_val_impactp01_fold2.csv']
+
 PREDS = [f'../../preds/densenet121_no_keepmax_fold{fold}.csv' for fold in range(4)]
 PRED_HITS = [f'../../preds/densenet121_hits_impactp01_fold{fold}.csv' for fold in range(4)]
 
@@ -20,9 +41,9 @@ TRACKING_IOU_THRESHOLD = 0.24
 TRACKING_FRAMES_DISTANCE = 9
 IMPACT_THRESHOLD_SCORE = 0.28
 
-weights = [1, 1, 1, 1]
+weights = [1, 1]
 iou_thr = 0.2
-skip_box_thr = 0.2
+skip_box_thr = 0.16
 
 best_metric = -1
 best_params = None
@@ -168,12 +189,12 @@ def combine_preds_wbf(images: list, df: pd.DataFrame, dfs, image_size, weights, 
     row = 0
     for image_id in images:
         # for youtube dataset
-        gameKey, playID, view = 0, 0, 0
-        video, frame =  image_id.split('_')
-        video = video + '.mp4'    
+        #gameKey, playID, view = 0, 0, 0
+        #video, frame =  image_id.split('_')
+        #video = video + '.mp4'    
         # for competition dataset    
-        # gameKey, playID, view, frame = image_id.split('_')[:4]
-        # video = f'{gameKey}_{playID}_{view}.mp4'
+        gameKey, playID, view, frame = image_id.split('_')[:4]
+        video = f'{gameKey}_{playID}_{view}.mp4'
         boxes, scores, labels = wbf_image_preds(image_id, dfs, weights, iou_thr, skip_box_thr)
         for (x1, y1, x2, y2), score, label in zip(boxes, scores, labels):
             df.loc[row,"gameKey"] = gameKey
@@ -260,7 +281,7 @@ def grid_search_wbf(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, 
     return results
 
 
-def grid_search_tracking(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, save_dir = '../../ensembling'):
+def grid_search_tracking(dfs, gtdf: pd.DataFrame, images: list, weights: list, save_dir = '../../ensembling'):
     """
     Helper to find optimal tracking parameters
     """
@@ -302,7 +323,7 @@ def grid_search_tracking(dfs: list, gtdf: pd.DataFrame, images: list, weights: l
     print(f'Best params: track_iou {best_iou}, distance {best_dist}')
 
 
-def grid_search_all(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, save_dir = '../../ensembling'):
+def grid_search_all(dfs, gtdf: pd.DataFrame, images: list, weights: list, save_dir = '../../ensembling'):
     image_size = (720, 1280)
     dist = TRACKING_FRAMES_DISTANCE
     best_metric = 0
@@ -346,7 +367,7 @@ def grid_search_all(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, 
             print(f'Best params: track_iou {best_iou}, best_iou_wbf {best_iou_wbf}, besk skip box {best_skip}, best impact thres {best_impact_th}')
 
 
-def combine_image_ids(dfs: list) -> list:
+def combine_image_ids(dfs) -> list:
     # Accumulate all image_ids for all predictions
     images = set()
     for df in dfs:
@@ -357,21 +378,15 @@ def combine_image_ids(dfs: list) -> list:
     return images
 
 
-def do_test_preds(dfs: list, gtdf: pd.DataFrame):
+def do_val_preds(dfs, gtdf: pd.DataFrame):
     # list preds dataframes
-    dfs = [pd.read_csv(preds_file) for preds_file in PREDS]
+    dfs = [pd.read_csv(preds_file) for preds_file in MIX]
     dfs = [preprocess_df(df.copy()) for df in dfs]
-    print(dfs[0].head())
-    print(dfs.video.unique())
-
+    
     #print('Apply filtering before...')
     #dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]
     dfs = [df[df.frame > 30] for df in dfs]
     images = combine_image_ids(dfs)
-    # test and plot WBF
-    image_id = images[20]
-    test_wbf(image_id, dfs, weights, iou_thr, skip_box_thr)
-    
     # combine WBF for all frames
     image_size = (720, 1280)
     df_combo = pd.DataFrame(columns = dfs[0].columns)
@@ -381,31 +396,30 @@ def do_test_preds(dfs: list, gtdf: pd.DataFrame):
 
     # apply postprocessing    
     print('Apply postprocessing...')
-    df_keepmax = keep_maximums(df, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
-    print(df_keepmax.head())
+    df_keepmax = keep_maximums(df_combo, iou_thresh=TRACKING_IOU_THRESHOLD, dist=TRACKING_FRAMES_DISTANCE)
+    #print(df_keepmax.head())
     #df_keepmax.to_csv('../../preds/keepmax_wbf_densenet121.csv', index = False)
-
-    gtdf = pd.read_csv('../../preds/test_densenet121_corrected.csv')
-    video_names = df_keepmax['video'].unique()
-    print('Number of videos for evaluation:', len(video_names))
+    video_names = gtdf['video'].unique()
+    pred_video = df_keepmax['video'].unique()
+    print('Number of videos for evaluation:', len(video_names), ' predicted video', len(pred_video))
     prec, rec, f1 = evaluate_df(gtdf, df_keepmax, video_names=None, impact=True)
     print(f"Precision {prec}, recall {rec}, f1 {f1}")
 
 
-def grid_impact_threshold(dfs: list, gtdf: pd.DataFrame):        
+def grid_impact_threshold(dfs, gtdf: pd.DataFrame):        
     video_names = gtdf['video'].unique()
     print('Number of videos for evaluation:', len(video_names))
     image_size = (720, 1280)
     num = 0
-    for IMPACT_THRESHOLD_SCORE in impact_thres_params:
-        print(f'EXPERIMENT {num}, thres {IMPACT_THRESHOLD_SCORE}')
+    for impact_thres in impact_thres_params:
+        print(f'EXPERIMENT {num}, thres {impact_thres}')
         #print('Apply filtering before...')
         #dfs = [df[df.scores > IMPACT_THRESHOLD_SCORE] for df in dfs]      
         images = combine_image_ids(dfs)               
-        # combine WBF for all frames        
+        # combine WBF for all frames  
+        print('Combined raw preds...')      
         df_combo = pd.DataFrame(columns = dfs[0].columns)
         df_combo = combine_preds_wbf(images, df_combo, dfs, image_size, weights, iou_thr, skip_box_thr)
-        # print('Combined raw preds ... \n', df_combo.head()) 
         print('Apply filtering after...') 
         df_combo = df_combo[df_combo.scores > IMPACT_THRESHOLD_SCORE]
         print('Apply postprocessing...')  
@@ -419,13 +433,16 @@ def grid_impact_threshold(dfs: list, gtdf: pd.DataFrame):
 
 if __name__ == "__main__":     
     # list preds dataframes
-    dfs = [pd.read_csv(preds_file) for preds_file in PRED_HITS]
+    dfs = [pd.read_csv(preds_file) for preds_file in MIX]
     dfs = [preprocess_df(df.copy()) for df in dfs]
-    dfs = [df[df.frame > 30] for df in dfs] # remove first frames (and last)
-    print(dfs[0].head())
+   # dfs = [df[df.frame > 30] for df in dfs] # remove first frames (and last)
+    print(dfs[1].head())
 
-    gtdf = pd.read_csv('../../preds/hits_meta.csv')
-    gtdf = add_width_height(gtdf)
+   # gtdf = pd.read_csv('../../preds/hits_meta.csv')
+    gtdf = pd.read_csv('../../data/train_labels.csv')
+    gtdf = gtdf[gtdf['video'].isin(FOLD0)]
+    gtdf = gtdf[(gtdf['impact'] == 1) &(gtdf['confidence'] > 1)&(gtdf['visibility']> 0)]
+    gtdf = add_bottom_right(gtdf)
     print('Ground thruth: \n', gtdf.head())
     video_names = gtdf['video'].unique()
     print('Number of videos for evaluation:', len(video_names))
@@ -433,6 +450,8 @@ if __name__ == "__main__":
     # test and plot WBF        
     #test_wbf(images[20], dfs, weights, iou_thr, skip_box_thr)
 
+    do_val_preds(dfs, gtdf)
+    grid_impact_threshold(dfs, gtdf)
     #results = grid_search_wbf(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
     #grid_search_tracking(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
-    grid_search_all(dfs, gtdf, images, weights, save_dir = '../../ensembling')
+    #grid_search_all(dfs, gtdf, images, weights, save_dir = '../../ensembling')
