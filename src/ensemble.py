@@ -49,8 +49,8 @@ best_metric = -1
 best_params = None
 skip_box_wbf_params = [0.13 + 0.02*i for i in range(10)]
 iou_wbf_params = [0.15 + 0.05*i for i in range(5)]
-dist_params = [i for i in range(2, 10)] 
-track_iou_params = [0.15 + 0.05*i for i in range(6)]
+dist_params = [7] 
+track_iou_params = [0.15 + 0.05*i for i in range(7)]
 impact_thres_params = [0.31 + 0.01*i for i in range(8)]
 
 
@@ -272,6 +272,8 @@ def grid_search_wbf(dfs: list, gtdf: pd.DataFrame, images: list, weights: list, 
                 out.write('recall: {}\n'.format(rec))
                 out.write('f1: {}\n'.format(f1))
                 out.close()
+                print('Current best metric: {}'.format(best_metric))
+                print(f'Current best params: wbf_iou {best_iou}, skip threshold {best_skip}')
     print('Best metric: {}'.format(best_metric))
     print(f'Best params: wbf_iou {best_iou}, skip threshold {best_skip}')
     results = {}
