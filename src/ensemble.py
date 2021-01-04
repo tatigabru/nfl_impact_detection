@@ -38,7 +38,7 @@ PREDS = [f'../../preds/densenet121_no_keepmax_fold{fold}.csv' for fold in range(
 PRED_HITS = [f'../../preds/densenet121_hits_impactp01_fold{fold}.csv' for fold in range(4)]
 
 TRACKING_IOU_THRESHOLD = 0.2
-TRACKING_FRAMES_DISTANCE = 9
+TRACKING_FRAMES_DISTANCE = 7
 IMPACT_THRESHOLD_SCORE = 0.35
 TRACKING_DIST_THRESHOLD = 10
 
@@ -450,8 +450,8 @@ if __name__ == "__main__":
     # test and plot WBF        
     #test_wbf(images[20], dfs, weights, iou_thr, skip_box_thr)
 
-    do_val_preds(dfs, gtdf)
-   # grid_impact_threshold(dfs, gtdf)
+   # do_val_preds(dfs, gtdf)
+    grid_impact_threshold(dfs, gtdf)
    # results = grid_search_wbf(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
    # grid_search_tracking(dfs, gtdf, images, weights, save_dir = '../../ensembling') 
     #grid_search_all(dfs, gtdf, images, weights, save_dir = '../../ensembling')
