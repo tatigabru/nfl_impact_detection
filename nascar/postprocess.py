@@ -1,8 +1,13 @@
 import numpy as np
+import sys
 from scipy.optimize import linear_sum_assignment
 from evaluate import evaluate_df
 from utils import add_bottom_right, iou, pad_boxes
+from prepare_trajectories import get_centered_data_by_pair, get_centered_test_data_by_pair
+from train_trajectories import predict, MyDataset
 import warnings
+from collections import Counter
+from torch.utils.data import DataLoader
 warnings.simplefilter(action='ignore')
 
 
@@ -84,12 +89,12 @@ def apply_linear_thresh(preddf, b=0.3, k=0):
     return preddf
 
 
-def keep_box_overlaps(df):
+def keep_box_overlaps(df, pad=0, iou_thresh=0.0):
     # keep only boxes that overlap
     keep_idxs = []
     videos = df['video'].unique()
     df = add_bottom_right(df)
-    #df = pad_boxes(df, alpha=-0.2)
+    pad_array = np.array([-1, -1, 1, 1]) * pad
     for video in videos:
         videodf = df[df['video'] == video]
         frames = videodf['frame'].unique()
@@ -100,7 +105,7 @@ def keep_box_overlaps(df):
             for idx1, value1 in zip(idxs, values):
                 for idx2, value2 in zip(idxs, values):
                     if idx1 < idx2:
-                        if iou(value1, value2) > 0:
+                        if iou(value1 + pad_array, value2 + pad_array) > iou_thresh:
                             keep_idxs.extend([idx1, idx2])
     #print(keep_idxs)
     return df.loc[list(set(keep_idxs))]
@@ -158,9 +163,9 @@ def add_tracking(df, dist=1, iou_thresh=0.8):
     return df
 
 
-def keep_maximums(df):
+def keep_maximums(df, dist=2, iou_thresh=0.5):
     # track boxes across frames and keep only box with maximum score
-    df = add_tracking(df, dist=2, iou_thresh=0.5)
+    df = add_tracking(df, dist=dist, iou_thresh=iou_thresh)
     df = df.sort_values(['video', 'track', 'scores'], ascending=False).drop_duplicates(['video', 'track'])
     return df
 
@@ -183,8 +188,8 @@ def keep_weighted_mean_frame(df):
     return df
 
 
-def keep_mean_frame(df):
-    df = add_tracking(df, dist=2, iou_thresh=0.25)
+def keep_mean_frame(df, dist=2, iou_thresh=0.25):
+    df = add_tracking(df, dist=dist, iou_thresh=iou_thresh)
     keepdf = df.groupby(['video', 'track']).mean()['frame'].astype(int).reset_index()
     df = df.merge(keepdf, on=['video', 'track', 'frame'])
     return df
@@ -214,21 +219,172 @@ def split_views(df):
     return df_sideline, df_endzone
 
 
+def trajectories_model(df, iou_thresh=0.25):
+    # currently preddf is one class prediction
+    cache_fp = cache_dir + f'./xywh_pred0.25_win15cent10_{iou_thresh}.npz'
+    df = add_tracking(df, iou_thresh=iou_thresh)
+    df = df.reset_index(drop=True)
+    df = df.reset_index(drop=False)
+
+    #indices, X, y = get_centered_test_data_by_pair(df, 'track', window=15, center=10, impact_len=2)
+    #np.savez(cache_fp, indices=indices, X=X, y=y)
+    #import sys
+    #sys.exit()
+    saved = np.load(cache_fp)
+    indices, X, y = saved['indices'], saved['X'], saved['y']
+    ind2pred = Counter()
+
+    dataset = MyDataset(X, y, shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=2048, shuffle=False, drop_last=False)
+    scores = predict(dataloader)
+    for ind, score in zip(indices, scores):
+        if score > ind2pred[ind]:
+            ind2pred[ind] = score
+
+    print('Size of validation data', len(df))
+    print('Number of predictions', len(set(indices)))
+    print('Number of positive predictions', sum( [ind2pred[ind] > 0.5 for ind in df.index]))
+    df['tr_scores'] = 0
+    df['tr_scores'] = [ind2pred[ind] for ind in df.index]
+    return df
+
+
+def frame_interval_ensemble(interval_pred_list):
+    return pd.concat([df[(df['frame'] >= start) & (df['frame'] <= end)] for (start, end), df in interval_pred_list])
+
+
+def simple_union_ensemble(df_list):
+    return pd.concat(df_list)
+
+
+def iou_overlap_ensemble(df1,  df2, iou_thresh=0.5):
+    # removes duplicates from second dataframe
+    keep_idxs = []
+    videos = df1['video'].unique()
+    df1 = add_bottom_right(df1).reset_index(drop=True)
+    df2 = add_bottom_right(df2).reset_index(drop=True)
+    drop_idxs = []
+    for video in videos:
+        videodf1 = df1[df1['video'] == video]
+        videodf2 = df2[df2['video'] == video]
+        frames = videodf1['frame'].unique()
+        for frame in frames:
+            framedf1 = videodf1[videodf1['frame'] == frame]
+            framedf2 = videodf2[videodf2['frame'] == frame]
+            idxs1 = list(framedf1.index)
+            idxs2 = list(framedf2.index)
+            values1 = framedf1[['left', 'top', 'right', 'bottom']].values
+            values2 = framedf2[['left', 'top', 'right', 'bottom']].values
+            for idx1, value1 in zip(idxs1, values1):
+                for idx2, value2 in zip(idxs2, values2):
+                    if iou(value1, value2) > iou_thresh:
+                        drop_idxs.append(idx2)
+
+    print(len(drop_idxs)/len(df2))
+    return pd.concat([df1, df2[~df2.index.isin(drop_idxs)]])
+
+
+def postprocess_parameter_search(train_labels, preddf=None):
+    gtdf = train_labels.query("impact == 1 and visibility > 0 and confidence > 1")
+    max_f1 = 0
+    best_params = None
+    for thresh in np.arange(0.15, 0.2, 0.01):
+        for min_frame in range(0, 1, 5):
+            for max_frame in range(10000, 15000, 1000):
+                for iou_thresh in np.arange(0.1, 0.2, 0.05):
+                    for dist in range(2, 10):
+                        for nms_func in (keep_maximums, keep_mean_frame):
+
+                            print(thresh, min_frame, max_frame, iou_thresh, dist, nms_func)
+                            preddf = pd.read_csv(project_fp + 'data/pred/predictions_3dcnn_0.52.csv')
+                            valid_video_names0 = preddf['video'].unique()
+                            preddf = apply_thresh(preddf, thresh=thresh)
+                            preddf = nms_func(preddf, dist=dist, iou_thresh=iou_thresh)
+                            preddf = preddf[((preddf['frame'] >= min_frame) & (preddf['frame'] <= max_frame))]
+                            valid_video_names = preddf['video'].unique()
+                            if len(valid_video_names0) == len(valid_video_names):
+                                prec, rec, f1 = evaluate_df(gtdf, preddf, impact=True)  # , video_names=valid_video_names)
+                                if f1 > max_f1:
+                                    max_f1 = f1
+                                    best_params = ((thresh, min_frame, max_frame, iou_thresh, dist, nms_func), (prec, rec, f1))
+
+    print(best_params)
+    return best_params
+
+
+def evaluate_postprocess_(train_labels, thresh=0.3, min_frame=30, max_frame=65, iou_thresh=0.25, dist=5, nms_func=keep_mean_frame):
+    print(len(train_labels))
+    gtdf = train_labels.query("impact == 1 and visibility > 0 and confidence > 1")
+    print(len(gtdf))
+    # preddf = pd.read_csv(project_fp + 'data/pred/public_kernel_impact_validation.csv')
+    preddf1 = pd.read_csv(project_fp + 'data/pred/predictions_3dcnn_0.36.csv')
+    preddf1 = apply_thresh(preddf1,  thresh)
+    preddf1 = nms_func(preddf1, iou_thresh=iou_thresh, dist=dist)
+    preddf1 = preddf1[((preddf1['frame'] >= min_frame) & (preddf1['frame'] <= max_frame))]
+    valid_video_names = preddf1['video'].unique()
+
+    #public_kernel_impact_validation.csv
+    #preddf = pd.read_csv(project_fp + 'data/pred/public_kernel_impact_validation.csv')
+    #preddf = pd.read_csv(project_fp + 'data/pred/predictions_3dcnn_0.36.csv')
+
+    #sub = pd.read_csv(project_fp + 'data/kaggle/sample_submission.csv')
+    #validdf = train_labels[train_labels['video'].isin(valid_video_names)]
+    #overlap_validdf = keep_box_overlaps(validdf, pad=2)
+    #print('total overlaps', len(overlap_validdf))
+    #print('impacts', len(validdf[validdf['impact'] == 1]))
+    #print('impacts', len(overlap_validdf[overlap_validdf['impact'] == 1]))
+    #preddf = apply_thresh(preddf, 0.9)
+    #preddf = trajectories_model(preddf, iou_thresh=0.2)
+
+    #preddf = preddf[preddf['tr_scores'] >= 0.4]
+    #preddf = apply_thresh(preddf, thresh)
+    #preddf = keep_box_overlaps(preddf, pad=2)
+    #print('overlap ', len(preddf))
+    #preddf = nms_func(preddf, iou_thresh=iou_thresh, dist=dist)
+
+    #preddf = preddf[((preddf['frame'] >= min_frame) & (preddf['frame'] <= max_frame))]
+    #ensdf = frame_interval_ensemble([((30, 90), preddf1), ((91, 1000), preddf)])
+    #ensdf = simple_union_ensemble([preddf, preddf1])
+    #ensdf = iou_overlap_ensemble(preddf, preddf1, iou_thresh=0.3)
+    print('Number of videos for evaluation:', len(valid_video_names))
+    evaluate_df(gtdf, preddf1, impact=True, video_names=valid_video_names)
+    #evaluate_df(gtdf, ensdf, impact=True, video_names=valid_video_names)
+
+def evaluate_postprocess(train_labels, thresh=0.3, min_frame=30, max_frame=65, iou_thresh=0.25, dist=5, nms_func=keep_mean_frame):
+    print(len(train_labels))
+    gtdf = train_labels.query("impact == 1 and visibility > 0 and confidence > 1")
+    print(len(gtdf))
+    preddf1 = pd.read_csv(project_fp + 'data/pred/predictions_3dcnn_0.52.csv')
+    preddf1 = apply_thresh(preddf1,  thresh)
+    preddf1 = nms_func(preddf1, iou_thresh=iou_thresh, dist=dist)
+    #preddf1 = preddf1[((preddf1['frame'] >= min_frame) & (preddf1['frame'] <= max_frame))]
+    #sideline, endzone = split_views(preddf1)
+
+    valid_video_names = preddf1['video'].unique()
+    print('Number of videos for evaluation:', len(valid_video_names))
+
+    #for video in valid_video_names:
+    #
+    #    print(video)
+    #    print(len(train_labels.query("video == @video")))
+    #    videodf = preddf1[preddf1['video'] == video]
+    #    evaluate_df(gtdf, videodf, impact=True) #, video_names=valid_video_names)
+    #    print('\n')
+    #sideline, endzone = split_views(preddf1)
+    evaluate_df(gtdf, preddf1, impact=True) #, video_names=valid_video_names)
+    #evaluate_df(gtdf, sideline, impact=True) #, video_names=valid_video_names)
+    #evaluate_df(gtdf, endzone, impact=True) #, video_names=valid_video_names)
+
+
+
+
 if __name__ == '__main__':
     import pandas as pd
     from config import *
     train_labels = pd.read_csv(train_labels_fp)
+    train_labels = pd.read_csv('../../data/kaggle/train_folds_propagate_0.csv')
     train_labels = train_labels.query("frame != 0")
-    print(len(train_labels))
-    gtdf = train_labels.query("impact == 1 and visibility > 0 and confidence > 1")
-    print(len(gtdf))
-    preddf = pd.read_csv(project_fp + 'data/pred/public_kernel_impact_validation.csv')
-    #preddf = pd.read_csv(project_fp + 'data/pred/tati_run1_fold0_all_boxes_14ep.csv')
+    #postprocess_parameter_search(train_labels)
+    evaluate_postprocess(train_labels, 0.15, 0, 20000, 0.15, 5, keep_mean_frame)
 
-    preddf = apply_thresh(preddf, 0.3)
-    preddf = keep_mean_frame(preddf)
-    preddf = preddf[(preddf['frame'] >= 30) & (preddf['frame'] <= 80)]
-    valid_video_names = preddf['video'].unique()
-    print('Number of videos for evaluation:', len(valid_video_names))
-    evaluate_df(gtdf, preddf, impact=True) #, video_names=valid_video_names)
 

@@ -24,7 +24,7 @@ nohup.out
 *.rar
 *.tar
 *.zip
-
+*.npz
 # mypy
 .mypy_cache/
 src/.mypy_cache/

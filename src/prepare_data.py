@@ -7,7 +7,7 @@ from multiprocessing import Pool
 from tqdm import tqdm
 
 
-DATA_DIR = '../../data/'
+DATA_DIR = '../../data/kaggle/'
 META_FILE = os.path.join(DATA_DIR, 'train_labels.csv')
 
 
@@ -54,13 +54,13 @@ def write_frames(video_path):
 
 
 def make_test_frames():
-    test_videos = os.listdir("../../data/test")    
+    test_videos = os.listdir("../../data/kaggle/test")
     pool = Pool()
     pool.map(write_frames, map(lambda video_name: f"{video_dir}/{video_name}", test_videos))
 
 
 if __name__ == "__main__":    
-    video_dir = '../../data/train'
+    video_dir = DATA_DIR + 'train'
     video_labels = pd.read_csv(META_FILE).fillna(0)
     uniq_video = video_labels.video.unique()    
     out_dir = '../../data/train_images_full/'
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     for video_name in uniq_video:
         make_images_from_video(video_name, video_labels, video_dir, out_dir, only_with_impact=False)
    
-    video_dir = '../../data/test'
+    video_dir = '../../data/kaggle/test'
     uniq_video = os.listdir(video_dir)
     out_dir = '../../data/test_images/'
     os.makedirs(out_dir, exist_ok=True)

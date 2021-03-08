@@ -2,6 +2,7 @@ project_fp = "../../"
 
 frames_fp = project_fp + 'data/train_images_full/'
 data_dir = "data/kaggle/"
+cache_dir = project_fp + 'data/cache/'
 data_fp = project_fp + data_dir
 
 images_fp = data_fp + 'images/'

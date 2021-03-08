@@ -1,7 +1,9 @@
 import cv2
+import matplotlib
+import numpy as np
 from matplotlib import pyplot as plt
 import imageio
-from config import train_fp
+from config import train_fp, frames_fp
 
 
 def show_frame_video_fp(video_fp, n=1):
@@ -25,6 +27,11 @@ def show_frame_video(video_name=None, video_id=None, n=1, view='Sideline'):
     show_frame_video_fp(video_fp, n=n)
 
 
+def get_image_fp(video_name, frame):
+    image_name = frames_fp + video_name.split('.')[0] + '_' + str(frame) + '.png'
+    return image_name
+
+
 def annotate_image(image_fp, boxes, boxes2=None):
     # Set label colors for bounding boxes
     img = imageio.imread(image_fp)
@@ -45,6 +52,7 @@ def annotate_image(image_fp, boxes, boxes2=None):
     # Display the image with bounding boxes added
     plt.imshow(img)
     plt.show()
+
 
 
 

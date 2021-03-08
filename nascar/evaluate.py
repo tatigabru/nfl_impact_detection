@@ -86,12 +86,18 @@ def evaluate_boxes(gt_data, pred_data, impact=True, iou_thresh=0.35):
     """
     ftp, ffp, ffn = [], [], []
     for video in gt_data:
-        pred_boxes = pred_data[video]
-        gt_boxes = gt_data[video]
-        if impact:
-            tp, fp, fn = precision_calc_impact_boxes(gt_boxes, pred_boxes)
+        if video not in pred_data:
+            if impact:
+                tp, fp, fn = 0, 0, len(gt_data[video])
+            else:
+                tp, fp, fn = 0, 0, sum([len(bs) for f, bs in gt_data[video].items()])
         else:
-            tp, fp, fn = precision_calc_boxes(gt_boxes, pred_boxes, iou_thresh=iou_thresh)
+            pred_boxes = pred_data[video]
+            gt_boxes = gt_data[video]
+            if impact:
+                tp, fp, fn = precision_calc_impact_boxes(gt_boxes, pred_boxes)
+            else:
+                tp, fp, fn = precision_calc_boxes(gt_boxes, pred_boxes, iou_thresh=iou_thresh)
 
         ftp.append(tp)
         ffp.append(fp)
@@ -166,9 +172,10 @@ if __name__ == '__main__':
     train_labels = pd.read_csv(train_labels_fp)
     train_labels = train_labels.query("frame != 0")
     print(len(train_labels))
-    gtdf = train_labels#.query("impact == 1 and visibility > 0 and confidence > 1")
+    gtdf = train_labels.query("impact == 1 and visibility > 0 and confidence > 1")
     print(len(gtdf))
-    preddf = pd.read_csv(project_fp + 'data/pred/run1_last_checkpoint_tati.csv')
+    preddf = pd.read_csv(project_fp + 'data/pred/tati-run3-video-and-image-27ep.csv')
+    #preddf = pd.read_csv(project_fp + 'data/pred/nfl2classes_8epoch_allbox.csv')
     print(len(preddf))
     preddf = preddf[preddf['scores'] > 0.3]
     print(len(preddf))
