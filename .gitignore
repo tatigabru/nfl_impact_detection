@@ -14,6 +14,7 @@ src/.ipynb_checkpoints/
 
 # nohup
 nohup.out
+src/train_folds_propagate_0.csv
 
 # packages
 *.7z

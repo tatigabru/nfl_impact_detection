@@ -8,7 +8,7 @@ import sys
 import numpy as np
 import torch
 from torch import nn
-
+import collections
 
 
 def fix_seed(seed: int=1234) -> None:
@@ -112,6 +112,21 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
-def load_weights(model: nn.Module, weights_file: str):
-    model.load_state_dict(torch.load(weights_file))
-    return model
+def transfer_weights(model: nn.Module, model_state_dict: collections.OrderedDict):
+    """
+    Copy weights from state dict to model, skipping layers that are incompatible.
+    This method is helpful if you are doing some model surgery and want to load
+    part of the model weights into different model.
+    :param model: Model to load weights into
+    :param model_state_dict: Model state dict to load weights from
+    :return: None
+    """
+    for name, value in model_state_dict.items():
+        try:
+            model.load_state_dict(collections.OrderedDict([(name, value)]), strict=False)
+        except Exception as e:
+            print(e)
+
+            
+def load_weights(model: nn.Module, weights_file, gpu_number: int):
+    model.load_state_dict(torch.load(weights_file, map_location=f'cuda:{gpu_number}'))

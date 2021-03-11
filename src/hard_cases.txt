@@ -1,0 +1,249 @@
+Initial dataframe: 
+                        video  frame  left  width  top    scores  height  right  bottom
+0    57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304
+1    57906_000718_Endzone.mp4     47   967     23  287  0.878906      28    990     315
+2   57906_000718_Sideline.mp4    243   652      9  326  0.466064       9    661     335
+3   57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338
+4                       dummy      1   652     20  326  0.466064      12    672     338
+5                       dummy      2   656     20  329  0.558105      19    676     348
+6                       dummy      3   659     20  329  0.558105      20    679     349
+7                      dummy2      4   665     20  331  0.558105      19    685     350
+8                       dummy      5   670     20  335  0.558105      21    690     356
+9                      dummy2      6   671     20  337  0.558105      19    691     356
+10                      dummy      7   677     20  333  0.558105      20    697     353
+
+ EXPERIMENT 0: distance = 2, IoU thres = 0.35
+Video: 57906_000718_Endzone.mp4
+IoU boxes: 0.33159947984395316
+Video: 57906_000718_Sideline.mp4
+IoU boxes: 0.22727272727272727
+Video: dummy
+IoU boxes: 0.3025210084033613
+IoU boxes: 0.7067833698030634
+IoU boxes: 0.18155619596541786
+IoU boxes: 0.3993174061433447
+Video: dummy2
+IoU boxes: 0.314878892733564
+Processed dataframe: 
+                       video  frame  left  width  top    scores  height  right  bottom  track
+9                     dummy2      6   671     20  337  0.558105      19    691     356      1
+7                     dummy2      4   665     20  331  0.558105      19    685     350      0
+8                      dummy      5   670     20  335  0.558105      21    690     356      2
+5                      dummy      2   656     20  329  0.558105      19    676     348      1
+4                      dummy      1   652     20  326  0.466064      12    672     338      0
+3  57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338      1
+2  57906_000718_Sideline.mp4    243   652      9  326  0.466064       9    661     335      0
+1   57906_000718_Endzone.mp4     47   967     23  287  0.878906      28    990     315      1
+0   57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304      0
+Not right tracks, [1 0 2 1 0 1 0 1 0]
+
+ EXPERIMENT 1: distance = 3, IoU thres = 0.35
+Video: 57906_000718_Endzone.mp4
+IoU boxes: 0.33159947984395316
+Video: 57906_000718_Sideline.mp4
+IoU boxes: 0.22727272727272727
+Video: dummy
+IoU boxes: 0.3025210084033613
+IoU boxes: 0.7067833698030634
+IoU boxes: 0.18155619596541786
+IoU boxes: 0.3993174061433447
+Video: dummy2
+IoU boxes: 0.314878892733564
+Processed dataframe: 
+                       video  frame  left  width  top    scores  height  right  bottom  track
+9                     dummy2      6   671     20  337  0.558105      19    691     356      1
+7                     dummy2      4   665     20  331  0.558105      19    685     350      0
+8                      dummy      5   670     20  335  0.558105      21    690     356      2
+5                      dummy      2   656     20  329  0.558105      19    676     348      1
+4                      dummy      1   652     20  326  0.466064      12    672     338      0
+3  57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338      1
+2  57906_000718_Sideline.mp4    243   652      9  326  0.466064       9    661     335      0
+1   57906_000718_Endzone.mp4     47   967     23  287  0.878906      28    990     315      1
+0   57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304      0
+Not right tracks, [1 0 2 1 0 1 0 1 0]
+
+ EXPERIMENT 2: distance = 4, IoU thres = 0.35
+Video: 57906_000718_Endzone.mp4
+IoU boxes: 0.33159947984395316
+Video: 57906_000718_Sideline.mp4
+IoU boxes: 0.22727272727272727
+Video: dummy
+IoU boxes: 0.3025210084033613
+IoU boxes: 0.7067833698030634
+IoU boxes: 0.18155619596541786
+IoU boxes: 0.3993174061433447
+Video: dummy2
+IoU boxes: 0.314878892733564
+Processed dataframe: 
+                       video  frame  left  width  top    scores  height  right  bottom  track
+9                     dummy2      6   671     20  337  0.558105      19    691     356      1
+7                     dummy2      4   665     20  331  0.558105      19    685     350      0
+8                      dummy      5   670     20  335  0.558105      21    690     356      2
+5                      dummy      2   656     20  329  0.558105      19    676     348      1
+4                      dummy      1   652     20  326  0.466064      12    672     338      0
+3  57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338      1
+2  57906_000718_Sideline.mp4    243   652      9  326  0.466064       9    661     335      0
+1   57906_000718_Endzone.mp4     47   967     23  287  0.878906      28    990     315      1
+0   57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304      0
+Not right tracks, [1 0 2 1 0 1 0 1 0]
+
+ EXPERIMENT 3: distance = 5, IoU thres = 0.35
+Video: 57906_000718_Endzone.mp4
+IoU boxes: 0.33159947984395316
+Video: 57906_000718_Sideline.mp4
+IoU boxes: 0.22727272727272727
+Video: dummy
+IoU boxes: 0.3025210084033613
+IoU boxes: 0.7067833698030634
+IoU boxes: 0.18155619596541786
+IoU boxes: 0.3993174061433447
+Video: dummy2
+IoU boxes: 0.314878892733564
+Processed dataframe: 
+                       video  frame  left  width  top    scores  height  right  bottom  track
+9                     dummy2      6   671     20  337  0.558105      19    691     356      1
+7                     dummy2      4   665     20  331  0.558105      19    685     350      0
+8                      dummy      5   670     20  335  0.558105      21    690     356      2
+5                      dummy      2   656     20  329  0.558105      19    676     348      1
+4                      dummy      1   652     20  326  0.466064      12    672     338      0
+3  57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338      1
+2  57906_000718_Sideline.mp4    243   652      9  326  0.466064       9    661     335      0
+1   57906_000718_Endzone.mp4     47   967     23  287  0.878906      28    990     315      1
+0   57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304      0
+Not right tracks, [1 0 2 1 0 1 0 1 0]
+
+ EXPERIMENT 4: distance = 4, IoU thres = 0.15
+Video: 57906_000718_Endzone.mp4
+IoU boxes: 0.33159947984395316
+Video: 57906_000718_Sideline.mp4
+IoU boxes: 0.22727272727272727
+Video: dummy
+IoU boxes: 0.3025210084033613
+IoU boxes: 0.7067833698030634
+IoU boxes: 0.18155619596541786
+IoU boxes: 0.3993174061433447
+Video: dummy2
+IoU boxes: 0.314878892733564
+Processed dataframe: 
+                       video  frame  left  width  top    scores  height  right  bottom  track
+7                     dummy2      4   665     20  331  0.558105      19    685     350      0
+5                      dummy      2   656     20  329  0.558105      19    676     348      0
+3  57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338      0
+0   57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304      0
+Not right tracks, [0 0 0 0]
+
+ EXPERIMENT 5: distance = 4, IoU thres = 0.2
+Video: 57906_000718_Endzone.mp4
+IoU boxes: 0.33159947984395316
+Video: 57906_000718_Sideline.mp4
+IoU boxes: 0.22727272727272727
+Video: dummy
+IoU boxes: 0.3025210084033613
+IoU boxes: 0.7067833698030634
+IoU boxes: 0.18155619596541786
+IoU boxes: 0.3993174061433447
+Video: dummy2
+IoU boxes: 0.314878892733564
+Processed dataframe: 
+                       video  frame  left  width  top    scores  height  right  bottom  track
+7                     dummy2      4   665     20  331  0.558105      19    685     350      0
+8                      dummy      5   670     20  335  0.558105      21    690     356      1
+5                      dummy      2   656     20  329  0.558105      19    676     348      0
+3  57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338      0
+0   57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304      0
+Not right tracks, [0 1 0 0 0]
+
+ EXPERIMENT 6: distance = 4, IoU thres = 0.25
+Video: 57906_000718_Endzone.mp4
+IoU boxes: 0.33159947984395316
+Video: 57906_000718_Sideline.mp4
+IoU boxes: 0.22727272727272727
+Video: dummy
+IoU boxes: 0.3025210084033613
+IoU boxes: 0.7067833698030634
+IoU boxes: 0.18155619596541786
+IoU boxes: 0.3993174061433447
+Video: dummy2
+IoU boxes: 0.314878892733564
+Processed dataframe: 
+                       video  frame  left  width  top    scores  height  right  bottom  track
+7                     dummy2      4   665     20  331  0.558105      19    685     350      0
+8                      dummy      5   670     20  335  0.558105      21    690     356      1
+5                      dummy      2   656     20  329  0.558105      19    676     348      0
+3  57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338      1
+2  57906_000718_Sideline.mp4    243   652      9  326  0.466064       9    661     335      0
+0   57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304      0
+Not right tracks, [0 1 0 1 0 0]
+
+ EXPERIMENT 7: distance = 4, IoU thres = 0.3
+Video: 57906_000718_Endzone.mp4
+IoU boxes: 0.33159947984395316
+Video: 57906_000718_Sideline.mp4
+IoU boxes: 0.22727272727272727
+Video: dummy
+IoU boxes: 0.3025210084033613
+IoU boxes: 0.7067833698030634
+IoU boxes: 0.18155619596541786
+IoU boxes: 0.3993174061433447
+Video: dummy2
+IoU boxes: 0.314878892733564
+Processed dataframe: 
+                       video  frame  left  width  top    scores  height  right  bottom  track
+7                     dummy2      4   665     20  331  0.558105      19    685     350      0
+8                      dummy      5   670     20  335  0.558105      21    690     356      1
+5                      dummy      2   656     20  329  0.558105      19    676     348      0
+3  57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338      1
+2  57906_000718_Sideline.mp4    243   652      9  326  0.466064       9    661     335      0
+0   57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304      0
+Not right tracks, [0 1 0 1 0 0]
+
+ EXPERIMENT 8: distance = 4, IoU thres = 0.35
+Video: 57906_000718_Endzone.mp4
+IoU boxes: 0.33159947984395316
+Video: 57906_000718_Sideline.mp4
+IoU boxes: 0.22727272727272727
+Video: dummy
+IoU boxes: 0.3025210084033613
+IoU boxes: 0.7067833698030634
+IoU boxes: 0.18155619596541786
+IoU boxes: 0.3993174061433447
+Video: dummy2
+IoU boxes: 0.314878892733564
+Processed dataframe: 
+                       video  frame  left  width  top    scores  height  right  bottom  track
+9                     dummy2      6   671     20  337  0.558105      19    691     356      1
+7                     dummy2      4   665     20  331  0.558105      19    685     350      0
+8                      dummy      5   670     20  335  0.558105      21    690     356      2
+5                      dummy      2   656     20  329  0.558105      19    676     348      1
+4                      dummy      1   652     20  326  0.466064      12    672     338      0
+3  57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338      1
+2  57906_000718_Sideline.mp4    243   652      9  326  0.466064       9    661     335      0
+1   57906_000718_Endzone.mp4     47   967     23  287  0.878906      28    990     315      1
+0   57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304      0
+Not right tracks, [1 0 2 1 0 1 0 1 0]
+
+ EXPERIMENT 9: distance = 4, IoU thres = 0.4
+Video: 57906_000718_Endzone.mp4
+IoU boxes: 0.33159947984395316
+Video: 57906_000718_Sideline.mp4
+IoU boxes: 0.22727272727272727
+Video: dummy
+IoU boxes: 0.3025210084033613
+IoU boxes: 0.7067833698030634
+IoU boxes: 0.18155619596541786
+IoU boxes: 0.3993174061433447
+Video: dummy2
+IoU boxes: 0.314878892733564
+Processed dataframe:
+                        video  frame  left  width  top    scores  height  right  bottom  track
+9                      dummy2      6   671     20  337  0.558105      19    691     356      1
+7                      dummy2      4   665     20  331  0.558105      19    685     350      0
+10                      dummy      7   677     20  333  0.558105      20    697     353      3
+8                       dummy      5   670     20  335  0.558105      21    690     356      2
+5                       dummy      2   656     20  329  0.558105      19    676     348      1
+4                       dummy      1   652     20  326  0.466064      12    672     338      0
+3   57906_000718_Sideline.mp4    244   656      9  329  0.558105       9    665     338      1
+2   57906_000718_Sideline.mp4    243   652      9  326  0.466064       9    661     335      0
+1    57906_000718_Endzone.mp4     47   967     23  287  0.878906      28    990     315      1
+0    57906_000718_Endzone.mp4     45   962     20  285  0.883789      19    982     304      0
+Not right tracks, [1 0 3 2 1 0 1 0 1 0]

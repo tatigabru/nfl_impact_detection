@@ -14,6 +14,15 @@ from tqdm import tqdm
 import neptune
 
 
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
+
+def set_lr(optimizer, new_lr):
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = new_lr
+
+        
 class Runner:
     
     def __init__(self, model, device, config):

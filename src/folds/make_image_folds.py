@@ -9,6 +9,8 @@ from typing import Optional
 import os
 from tqdm import tqdm
 
+DATA_DIR = '../../data/'
+
 
 def make_folds(df: pd.DataFrame, n_splits: int = 5, save_dir: Optional[str] = None) -> pd.DataFrame:
     """
@@ -87,8 +89,7 @@ def preprocess_image_meta(image_labels: pd.DataFrame, save_dir: Optional[str] = 
     return image_labels
 
 
-if __name__ == "__main__":    
-    DATA_DIR = '../../data/'
+def do_main():    
     META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')       
     image_labels = pd.read_csv(META_FILE).fillna(0)
     
@@ -113,5 +114,15 @@ if __name__ == "__main__":
     print(image_labels.head())
     image_labels.to_csv(f'{DATA_DIR}/image_meta.csv', index=False)
 
-   # META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
-   # FOLDS_FILE = os.path.join(DATA_DIR, 'image_folds.csv')
+
+if __name__ == "__main__":     
+    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
+    image_labels = pd.read_csv(f'{DATA_DIR}/image_meta.csv')
+    print(len(video_labels))
+
+    selected = ['image_name','x','y','w','h','video_id','fold']
+    video = video_labels[selected]
+    image = image_labels[selected]
+    all_df = pd.concat([video, image])
+    print(len(all_df))
+    all_df.to_csv(f'{DATA_DIR}/all_meta.csv', index=False)

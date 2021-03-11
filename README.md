@@ -1,6 +1,6 @@
 # NFL Challenge: Detect helmets in American Football
 
-This projects contains a retrained EfficientDet that detects helmets in football images.
+This projects contains a pretrained EfficientDet that detects helmets in football images.
 
 ![americal football](pics/football.jpg)
 
@@ -24,8 +24,7 @@ python -m src.folds.make_folds
 
 ## Inference
 
-For images run
-
+For images run:
 ```python predict_image.py -i some.jpg -o some_output.jpg```
 
 For MP4 videos, you have to go through every frame and run the prediction.
