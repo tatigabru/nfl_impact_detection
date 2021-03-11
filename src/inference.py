@@ -161,7 +161,6 @@ def run_inference() -> None:
         drop_last=False,
         collate_fn=collate_fn
     )
-
        
     result_image_ids = []
     results_boxes = []

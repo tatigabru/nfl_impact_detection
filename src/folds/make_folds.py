@@ -167,7 +167,6 @@ if __name__ == "__main__":
     video_labels['h'] = video_labels['height']
     print(video_labels.head())
     #video_labels.to_csv(f'{DATA_DIR}/video_meta_3.csv', index=False)
-
     #video_labels = preprocess_video_meta(df, save_dir=DATA_DIR)
     #video_labels = pd.read_csv(os.path.join(DATA_DIR, 'video_meta_3.csv'))
     

@@ -219,7 +219,6 @@ def run_training() -> None:
     config.image_size = image_size
     net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
     weights_path = '../../checkpoints/effdet5_fold_0_512_run3/best-checkpoint-027epoch.bin' 
-    # weights_path = '../../checkpoints/effdet5_fold_0_512_2classes_cont_run3_run5/best-checkpoint-008epoch.bin'   
     checkpoint = torch.load(weights_path, map_location=f'cuda:{gpu_number}')
     transfer_weights(model = net, model_state_dict = checkpoint['model_state_dict'])
     print(f'Weights loaded from: {weights_path}')

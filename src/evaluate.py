@@ -114,9 +114,6 @@ def precision_calc_boxes(gt_boxes, pred_boxes, iou_thresh=0.35):
     return all_tp, all_fp, all_fn
 
 
-#tp, fp, fn = precision_calc(gt_boxes, pred_boxes)
-#print(f'TP: {tp}, FP: {fp} FN: {fn}')
-
 def evaluate_boxes(gt_data, pred_data, impact=True, iou_thresh=0.35):
     """
     :param gt_data: {'video_name1': video_data1,

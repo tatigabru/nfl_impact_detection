@@ -31,6 +31,10 @@ FOLD0 = ['57584_002674_Endzone.mp4', '57584_002674_Sideline.mp4',
 
 PREDS_DIR = '../../preds'
 
+MIX_FOLD0 = ['../../preds/final_predictions_resnet.csv',
+            '../../preds/densenet121_val_impactp01_fold0.csv',
+]
+
 MIX = ['../../preds/3dnn_predictions_fold0.csv',
       # '../../preds/densenet121_val_impactp01_fold0.csv',
       # '../../preds/b5_val_impactp01_fold0.csv'
@@ -48,7 +52,7 @@ TRACKING_FRAMES_DISTANCE = 7
 IMPACT_THRESHOLD_SCORE = 0.33
 TRACKING_DIST_THRESHOLD = 10
 
-weights = [1]
+weights = [1, 1]
 iou_thr = 0.2
 skip_box_thr = 0.17
 
@@ -498,7 +502,7 @@ def grid_impact_threshold(dfs, gtdf: pd.DataFrame):
 
 if __name__ == "__main__":     
     # list preds dataframes
-    dfs = [pd.read_csv(preds_file) for preds_file in MIX]
+    dfs = [pd.read_csv(preds_file) for preds_file in MIX_FOLD0]
     dfs = [preprocess_df(df.copy()) for df in dfs]
     dfs = [df[df.frame > 30] for df in dfs] # remove first frames (and last)
     print(dfs[0].head())
