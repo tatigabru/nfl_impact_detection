@@ -2,7 +2,7 @@
 
 This projects contains a pretrained EfficientDet that detects helmets in football images.
 
-![americal football](pics/football.png)
+![americal football](pics/football.jpg)
 
 ## Models
 EfficientDet from PyTorch [repo](https://github.com/google/automl/tree/master/efficientdet).
