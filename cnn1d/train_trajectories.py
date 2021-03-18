@@ -30,26 +30,6 @@ data_fp = cache_dir + f'./xywh_2_win{SIZE}_track_0.2_center{CENTER}_norm.npz'
 print(SIZE, H, NUM_CLASS, BATCH_SIZE, N_EPOCHS, LR, SAMPLE)
 
 
-
-"""
-conv1 = keras.layers.Conv2D(128, 8, 1, padding='same')(x)
-conv1 = keras.layers.BatchNormalization()(conv1)
-conv1 = keras.layers.Activation('relu')(conv1)
-
-
-#drop_out = Dropout(0.2)(conv1)
-conv2 = keras.layers.Conv2D(256, 5, 1, padding='same')(conv1)
-conv2 = keras.layers.BatchNormalization()(conv2)
-conv2 = keras.layers.Activation('relu')(conv2)
-
-#drop_out = Dropout(0.2)(conv2)
-conv3 = keras.layers.Conv2D(128, 3, 1, padding='same')(conv2)
-conv3 = keras.layers.BatchNormalization()(conv3)
-conv3 = keras.layers.Activation('relu')(conv3)
-
-full = keras.layers.GlobalAveragePooling2D()(conv3)
-out = keras.layers.Dense(nb_classes, activation='softmax')(full)
-"""
 class CNN(nn.Module):
     def __init__(self, c1=256, c2=64, c3=16, h1=SIZE - 6, p=0):
         super(CNN, self).__init__()
@@ -77,6 +57,7 @@ class CNN(nn.Module):
         #x = self.fc2(F.relu(self.fc1(x)))
         x = self.fc(x)
         return x
+
 
 class CNN_(nn.Module):
     def __init__(self, c1=256, c2=64, c3=16, h1=SIZE - 6, p=0):
@@ -251,16 +232,7 @@ def train_epochs():
             tp += torch.eq(output.argmax(1) + impact, 2).sum().item()
             preds += output.argmax(1).sum().item()
             targs += impact.sum().item()
-        #with torch.no_grad():
-
-            #print(torch.max(output[:, 1]).item())
-            # print(impact)
-            # print(model.fc1.weight)
-            # print(model.fc2.weight)
-            # print(torch.max(model.fc1.weight.grad))
-            # print(torch.max(model.fc2.weight.grad))
         # Adjust the learning rate
-
         scheduler.step(train_loss)
         # print('Prec:', tp/preds)
         # print('Rec:', tp/targs)
@@ -269,12 +241,8 @@ def train_epochs():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = CNN().to(device)
     print(model)
-
-
-
     criterion = torch.nn.CrossEntropyLoss(weight=torch.tensor([1, WEIGHT], dtype=torch.float)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=10e-5)
-    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.9)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, threshold=0.0001)
 
     saved = np.load(data_fp)
@@ -291,22 +259,19 @@ def train_epochs():
     best_valid_loss = float('inf')
     best_f1 = 0
     for epoch in range(N_EPOCHS):
-
         start_time = time.time()
         train_loss, train_f1 = train_func(train_dataset)
         valid_loss, valid_f1 = test(valid_dataset, model, criterion)
-
         secs = int(time.time() - start_time)
         mins = secs / 60
         secs = secs % 60
         if valid_f1 > best_f1:
             torch.save(model.state_dict(), model_fp)
             best_f1 = valid_f1
-           # best_valid_loss = valid_loss
+            best_valid_loss = valid_loss
         print('Epoch: %d' %(epoch + 1), " | time in %d minutes, %d seconds" %(mins, secs))
         print(f'\tLoss: {train_loss:.7f}(train)\t|\tF1: {train_f1 * 100:.1f}%(train)')
         print(f'\tLoss: {valid_loss:.7f}(valid)\t|\tF1: {valid_f1 * 100:.1f}%(valid)')
-
 
     print('Checking the results of test dataset...')
     model = CNN()
@@ -321,10 +286,8 @@ def test_best():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     saved = np.load(data_fp)
-
     X_train, y_train, X_valid, y_valid = saved['X_train'], saved['y_train'], saved['X_valid'], saved['y_valid']
-
-    #train_dataset = MyDataset(X_train, y_train.flatten(), shuffle=True)
+    train_dataset = MyDataset(X_train, y_train.flatten(), shuffle=True)
     valid_dataset = MyDataset(X_valid, y_valid.flatten(), shuffle=False)
 
     model = CNN()
