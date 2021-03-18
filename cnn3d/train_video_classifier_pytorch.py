@@ -11,6 +11,7 @@ from cnn3d.postprocess import keep_maximums
 from sklearn.metrics import f1_score
 from scipy.special import softmax
 
+
 class ImpactF1:
     def __init__(self, num_propagate_impacts=0):
         df_path = "train_folds_propagate_0.csv"
@@ -146,7 +147,6 @@ def train_epochs(model, loaders, epochs, criterion, optimizer, scheduler=None, d
     best_loss = float('inf')
     best_f1 = -1
 
-    #try:
     print('Start training')
     for epoch in range(epochs):
         print('\nEPOCH:', {epoch}, '\n')
@@ -170,9 +170,7 @@ def train_epochs(model, loaders, epochs, criterion, optimizer, scheduler=None, d
             best_loss = valid_loss
 
         print(f'Loss: {valid_loss:.7f}(valid) | F1: {valid_f1 * 100:.1f}%(valid)')
-    #except KeyboardInterrupt:
-    #    raise Exception('Train loop canceled')
-    #finally:
+    
     if epochs != 1:
         print('Checking the results of test dataset...')
         model.load_state_dict(torch.load(model_best_f1_fp))

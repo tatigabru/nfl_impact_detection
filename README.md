@@ -4,10 +4,12 @@ This projects contains a pretrained EfficientDet that detects helmets in footbal
 
 ![americal football](pics/football.jpg)
 
-## Models
+## References
 EfficientDet from PyTorch [repo](https://github.com/google/automl/tree/master/efficientdet).
 
-1D CNN classifiers
+3D CNNs: [EfficientNet-PyTorch-3D](https://github.com/shijianjian/EfficientNet-PyTorch-3D).
+
+3D CNNs: [Efficient-3DCNNs](https://github.com/okankop/Efficient-3DCNNs).
 
 ## Dataset
 The data were provided by th challenge orginisers. The data can be downloaded from the [NFL Impact Detection](https://www.kaggle.com/c/nfl-impact-detection). The script to download the dataset is in ```scripts/download_data```. 
@@ -31,14 +33,23 @@ For images, run:
 ```python inference.py``` runs inference for helmets detection
 
 ## Reproduce Training
-
 Generate training frames. 
 
+#### One class helmet detection
 Change path to data in ```src.effdet_train.py```
 
 First, train 1-class helmet detection:
 ```python src.effdet_train.py```
 
+#### Two class helmet detection
 Change path to wieghts in ```src.effdet_train_2classes.py```
 
 Fine-tune detection for 2 classes: ```python src.effdet_train_2classes.py```
+
+#### Second-level 1D CNN classifier
+Use helmet predictions/ground truch for second-level 1D CNN classifier.
+Generate predictions tensor and train 1D CNN: ```python cnn1d.train_trajectories.py```
+
+#### Second-level 3D CNN classifier
+Use helmet predictions/ground truch for second-level 3D CNN classifier.
+Generate predictions tensor and train 1D CNN: ```python cnn3d.train_video_classifier_pytorch.py```
