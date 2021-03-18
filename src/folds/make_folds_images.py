@@ -11,7 +11,9 @@ import os
 from tqdm import tqdm
 
 
-def create_stratified_folds(df: pd.DataFrame, nb_folds: int, save_dir: Optional[str] = None) -> pd.DataFrame:
+def create_stratified_folds(
+    df: pd.DataFrame, nb_folds: int, save_dir: Optional[str] = None
+) -> pd.DataFrame:
     """
     Create folds
     Args: 
@@ -31,12 +33,14 @@ def create_stratified_folds(df: pd.DataFrame, nb_folds: int, save_dir: Optional[
         df.loc[test_index, "fold"] = fold
     # save dataframe with folds (optionally)
     if save_dir:
-        df.to_csv(f'{save_dir}/images_folds.csv', index=False)
-        
+        df.to_csv(f"{save_dir}/images_folds.csv", index=False)
+
     return df
 
 
-def create_folds(df: pd.DataFrame, nb_folds: int, save_dir: Optional[str] = None) -> pd.DataFrame:
+def create_folds(
+    df: pd.DataFrame, nb_folds: int, save_dir: Optional[str] = None
+) -> pd.DataFrame:
     """
     Create folds
     Args: 
@@ -52,26 +56,26 @@ def create_folds(df: pd.DataFrame, nb_folds: int, save_dir: Optional[str] = None
     folds_df = pd.DataFrame()
     folds_df["image"] = x
     folds_df["fold"] = -1  # set all folds to -1 initially
-    
+
     # split folds
-    for fold, (train_index, test_index) in enumerate(kf.split(x)):       
-        x_test = x[test_index]        
+    for fold, (train_index, test_index) in enumerate(kf.split(x)):
+        x_test = x[test_index]
         folds_df.loc[test_index, "fold"] = fold
     # save dataframe with folds
     if save_dir:
-        folds_df.to_csv(f'{save_dir}/image_folds.csv', index=False)
-    
+        folds_df.to_csv(f"{save_dir}/image_folds.csv", index=False)
+
     return folds_df
 
 
 if __name__ == "__main__":
-    DATA_DIR = '../../data/nfl-impact-detection/'
-    META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')       
+    DATA_DIR = "../../data/nfl-impact-detection/"
+    META_FILE = os.path.join(DATA_DIR, "image_labels.csv")
     # Read in the image labels file
     df = pd.read_csv(META_FILE)
     print(df.head())
     x = df.image.unique()
-    print(f'Unique images: {len(x)}, examples {x[:10]}')
+    print(f"Unique images: {len(x)}, examples {x[:10]}")
 
-    folds = create_folds(df, nb_folds = 4, save_dir = DATA_DIR)
+    folds = create_folds(df, nb_folds=4, save_dir=DATA_DIR)
     print(folds.head(20))

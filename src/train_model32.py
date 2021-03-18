@@ -3,7 +3,10 @@ import random
 import re
 import sys
 import warnings
-os.system("pip install --no-deps 'timm_wheels/timm-0.1.26-py3-none-any.whl' > /dev/null")
+
+os.system(
+    "pip install --no-deps 'timm_wheels/timm-0.1.26-py3-none-any.whl' > /dev/null"
+)
 
 import albumentations as A
 import cv2
@@ -16,6 +19,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import SequentialSampler
 from torchvision import transforms
 from tqdm import tqdm
+
 sys.path.append("../../timm-efficientdet-pytorch")
 
 import neptune
@@ -23,26 +27,26 @@ from effdet import DetBenchTrain, DetBenchEval, EfficientDet, get_efficientdet_c
 from effdet.efficientdet import HeadNet
 from typing import Optional, List, Tuple
 
-from helpers.model_helpers import (collate_fn, fix_seed)
+from helpers.model_helpers import collate_fn, fix_seed
 from train_dataset import HelmetDataset
-from get_transforms import (get_train_transforms, get_valid_transforms)
+from get_transforms import get_train_transforms, get_valid_transforms
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 fix_seed(1234)
 
 print(torch.__version__)
 print(neptune.__version__)
 
-DATA_DIR = '../../data/'
-TRAIN_IMG = os.path.join(DATA_DIR, 'images')
-META_FILE = os.path.join(DATA_DIR, 'image_labels.csv')
-FOLDS_FILE = os.path.join(DATA_DIR, 'image_folds.csv')
-VIDEO_META = os.path.join(DATA_DIR, 'video_meta.csv')
-TRAIN_VIDEO = os.path.join(DATA_DIR, 'train_images_full')
+DATA_DIR = "../../data/"
+TRAIN_IMG = os.path.join(DATA_DIR, "images")
+META_FILE = os.path.join(DATA_DIR, "image_labels.csv")
+FOLDS_FILE = os.path.join(DATA_DIR, "image_folds.csv")
+VIDEO_META = os.path.join(DATA_DIR, "video_meta.csv")
+TRAIN_VIDEO = os.path.join(DATA_DIR, "train_images_full")
 
-fold_column = 'fold'
+fold_column = "fold"
 fold = 0
-image_id_column = 'image_id'
+image_id_column = "image_id"
 
 num_workers = 2
 train_batch_size = 4
@@ -59,44 +63,47 @@ overall_patience = 10
 loss_delta = 1e-4
 gpu_number = 0
 
-model_name = 'effdet5'
-experiment_tag = 'run1'
-experiment_name = f'{model_name}_fold{fold}_{image_size}_{experiment_tag}'
-checkpoints_dir = f'../../checkpoints/{model_name}'
+model_name = "effdet5"
+experiment_tag = "run1"
+experiment_name = f"{model_name}_fold{fold}_{image_size}_{experiment_tag}"
+checkpoints_dir = f"../../checkpoints/{model_name}"
 os.makedirs(checkpoints_dir, exist_ok=True)
 
 # Define parameters
-PARAMS = {'fold' : fold,
-          'num_workers': num_workers,
-          'train_batch_size': train_batch_size,
-          'effective_train_batch_size': effective_train_batch_size,
-          'grad_accum': grad_accum,
-          'image_size': image_size,
-          'n_epochs': n_epochs, 
-          'factor': factor, 
-          'start_lr': start_lr, 
-          'min_lr': min_lr, 
-          'lr_patience': lr_patience, 
-          'overall_patience': overall_patience, 
-          'loss_delta': loss_delta, 
-          'experiment_tag': experiment_tag, 
-          'checkpoints_dir': checkpoints_dir,            
-         }
+PARAMS = {
+    "fold": fold,
+    "num_workers": num_workers,
+    "train_batch_size": train_batch_size,
+    "effective_train_batch_size": effective_train_batch_size,
+    "grad_accum": grad_accum,
+    "image_size": image_size,
+    "n_epochs": n_epochs,
+    "factor": factor,
+    "start_lr": start_lr,
+    "min_lr": min_lr,
+    "lr_patience": lr_patience,
+    "overall_patience": overall_patience,
+    "loss_delta": loss_delta,
+    "experiment_tag": experiment_tag,
+    "checkpoints_dir": checkpoints_dir,
+}
 
 
-def get_lr(optimizer ):
+def get_lr(optimizer):
     for param_group in optimizer.param_groups:
-        return param_group['lr']
+        return param_group["lr"]
+
 
 def set_lr(optimizer, new_lr):
     for param_group in optimizer.param_groups:
-        param_group['lr'] = new_lr
+        param_group["lr"] = new_lr
+
 
 def load_weights(model, weights_file):
-    model.load_state_dict(torch.load(weights_file, map_location=f'cuda:{gpu_number}'))
+    model.load_state_dict(torch.load(weights_file, map_location=f"cuda:{gpu_number}"))
 
 
-class ModelManager():
+class ModelManager:
     def __init__(self, train_model, eval_model, device):
         self.train_model = train_model
         self.eval_model = eval_model
@@ -109,21 +116,22 @@ class ModelManager():
 
         for batch_idx, (imgs, labels, image_id) in enumerate(tqdm_generator):
             if batch_idx == 0:
-                print('first batch is', image_id)
+                print("first batch is", image_id)
             loss = self.train_on_batch(optimizer, imgs, labels, batch_idx)
             # Slide average
             current_loss_mean = (current_loss_mean * batch_idx + loss) / (batch_idx + 1)
 
-            tqdm_generator.set_description('loss: {:.4} lr:{:.6}'.format(
-                current_loss_mean, get_lr(optimizer)), refresh=False)
+            tqdm_generator.set_description(
+                "loss: {:.4} lr:{:.6}".format(current_loss_mean, get_lr(optimizer)),
+                refresh=False,
+            )
         return current_loss_mean
-
 
     def train_on_batch(self, optimizer, batch_imgs, batch_labels, batch_idx):
         batch_imgs = torch.stack(batch_imgs)
         batch_imgs = batch_imgs.to(self.device).float()
-        batch_boxes = [target['boxes'].to(self.device) for target in batch_labels]
-        batch_labels = [target['labels'].to(self.device) for target in batch_labels]
+        batch_boxes = [target["boxes"].to(self.device) for target in batch_labels]
+        batch_labels = [target["labels"].to(self.device) for target in batch_labels]
         loss, _, _ = self.train_model(batch_imgs, batch_boxes, batch_labels)
 
         loss.backward()
@@ -134,7 +142,7 @@ class ModelManager():
     def predict(self, generator):
         self.eval_model.eval()
         self.eval_model.to(self.device)
-        
+
         true_list = []
         pred_boxes = []
         pred_scores = []
@@ -142,15 +150,15 @@ class ModelManager():
         original_image_size = 1280
 
         tqdm_generator = tqdm(generator, mininterval=15)
-        tqdm_generator.set_description('predict')
+        tqdm_generator.set_description("predict")
         with torch.no_grad():
             for batch_idx, (imgs, true_targets, _) in enumerate(tqdm_generator):
                 if not (true_targets is None):
-                    true_list.extend([gt['original_boxes'] for gt in true_targets])
+                    true_list.extend([gt["original_boxes"] for gt in true_targets])
                 imgs = torch.stack(imgs)
                 imgs = imgs.to(self.device).float()
                 predicted = self.eval_model(imgs).float().to(self.device)
-                #predicted = self.eval_model(imgs, torch.tensor([2] * len(imgs)).float().to(self.device))
+                # predicted = self.eval_model(imgs, torch.tensor([2] * len(imgs)).float().to(self.device))
                 for i in range(len(imgs)):
                     cur_boxes = predicted[i].detach().cpu().numpy()[:, :4]
                     cur_boxes = np.array(cur_boxes, dtype=int)
@@ -180,8 +188,19 @@ class ModelManager():
                     pred_scores.append(cur_scores)
         return true_list, pred_boxes, pred_scores
 
-    def run_train(self, train_generator, val_generator, n_epoches, weights_file, factor, start_lr, min_lr,
-                  lr_patience, overall_patience, loss_delta=0.):
+    def run_train(
+        self,
+        train_generator,
+        val_generator,
+        n_epoches,
+        weights_file,
+        factor,
+        start_lr,
+        min_lr,
+        lr_patience,
+        overall_patience,
+        loss_delta=0.0,
+    ):
         self.best_loss = 100
         self.best_metric = 0
         self.best_epoch = 0
@@ -189,131 +208,175 @@ class ModelManager():
         self.best_lr_epoch = 0
 
         self.train_model.to(self.device)
-        #params = [p for p in self.train_model.parameters() if p.requires_grad]
+        # params = [p for p in self.train_model.parameters() if p.requires_grad]
         optimizer = optim.AdamW(params=self.train_model.parameters(), lr=start_lr)
 
         for epoch in range(n_epoches):
-            print('!!!! Epoch {}'.format(epoch))
+            print("!!!! Epoch {}".format(epoch))
             train_loss = self.train_epoch(optimizer, train_generator)
-            print(f'Train loss: {train_loss}, lr: {get_lr(optimizer)}')
-            neptune.log_metric('Train loss', train_loss)
-            neptune.log_metric('Lr', get_lr(optimizer))
-            
-            if not self.on_epoch_end(epoch, optimizer, val_generator, weights_file, factor, min_lr, lr_patience, overall_patience, loss_delta):
+            print(f"Train loss: {train_loss}, lr: {get_lr(optimizer)}")
+            neptune.log_metric("Train loss", train_loss)
+            neptune.log_metric("Lr", get_lr(optimizer))
+
+            if not self.on_epoch_end(
+                epoch,
+                optimizer,
+                val_generator,
+                weights_file,
+                factor,
+                min_lr,
+                lr_patience,
+                overall_patience,
+                loss_delta,
+            ):
                 break
-      
-    def on_epoch_end(self, epoch, optimizer, val_generator, weights_file, factor, min_lr, lr_patience, overall_patience, loss_delta):
+
+    def on_epoch_end(
+        self,
+        epoch,
+        optimizer,
+        val_generator,
+        weights_file,
+        factor,
+        min_lr,
+        lr_patience,
+        overall_patience,
+        loss_delta,
+    ):
         self.train_model.eval()
         current_loss = 0
 
         tqdm_generator = tqdm(val_generator, mininterval=15)
-        tqdm_generator.set_description('validation loss')
+        tqdm_generator.set_description("validation loss")
 
         with torch.no_grad():
-            for batch_idx, (batch_imgs, batch_labels, image_id) in enumerate(tqdm_generator):
+            for batch_idx, (batch_imgs, batch_labels, image_id) in enumerate(
+                tqdm_generator
+            ):
                 batch_imgs = torch.stack(batch_imgs)
                 batch_imgs = batch_imgs.to(self.device).float()
-                batch_boxes = [target['boxes'].to(self.device) for target in batch_labels]
-                batch_labels = [target['labels'].to(self.device) for target in batch_labels]
+                batch_boxes = [
+                    target["boxes"].to(self.device) for target in batch_labels
+                ]
+                batch_labels = [
+                    target["labels"].to(self.device) for target in batch_labels
+                ]
                 loss, _, _ = self.train_model(batch_imgs, batch_boxes, batch_labels)
                 loss_value = loss.item()
                 # Slide average
                 current_loss = (current_loss * batch_idx + loss_value) / (batch_idx + 1)
-        
-        # validate loss        
-        print('\nValidation loss: ', current_loss)
-        neptune.log_metric('Validation loss', current_loss)        
-              
+
+        # validate loss
+        print("\nValidation loss: ", current_loss)
+        neptune.log_metric("Validation loss", current_loss)
+
         if current_loss < self.best_loss - loss_delta:
-            print(f'\nLoss has been improved from {self.best_loss} to {current_loss}')
+            print(f"\nLoss has been improved from {self.best_loss} to {current_loss}")
             self.best_loss = current_loss
             self.best_epoch = epoch
-            torch.save(self.train_model.model.state_dict(), f'{weights_file}')
+            torch.save(self.train_model.model.state_dict(), f"{weights_file}")
         else:
-            print(f'\nLoss has not been improved from {self.best_loss}')            
+            print(f"\nLoss has not been improved from {self.best_loss}")
 
         if epoch - self.best_epoch > overall_patience:
-            print('\nEarly stop: training finished with patience!')
-            return False    
+            print("\nEarly stop: training finished with patience!")
+            return False
 
-        print('curr_lr_loss', self.curr_lr_loss)
+        print("curr_lr_loss", self.curr_lr_loss)
         if current_loss >= self.curr_lr_loss - loss_delta:
-            print('curr_lr_loss not improved')
+            print("curr_lr_loss not improved")
             old_lr = float(get_lr(optimizer))
-            print('old_lr', old_lr)
+            print("old_lr", old_lr)
             if old_lr > min_lr and epoch - self.best_lr_epoch > lr_patience:
                 new_lr = old_lr * factor
                 new_lr = max(new_lr, min_lr)
-                print('new_lr', new_lr)
+                print("new_lr", new_lr)
                 set_lr(optimizer, new_lr)
                 self.curr_lr_loss = 100
                 self.best_lr_epoch = epoch
-                print('\nEpoch %05d: ReduceLROnPlateau reducing learning rate to %s.' % (epoch, new_lr))
+                print(
+                    "\nEpoch %05d: ReduceLROnPlateau reducing learning rate to %s."
+                    % (epoch, new_lr)
+                )
         else:
-            print('curr_lr_loss improved')
+            print("curr_lr_loss improved")
             self.curr_lr_loss = current_loss
             self.best_lr_epoch = epoch
         return True
 
 
 def enumerate_images(test_dir):
-    return [f for root, _, files in os.walk(test_dir) for f in files if f.endswith('.jpg')]
+    return [
+        f for root, _, files in os.walk(test_dir) for f in files if f.endswith(".jpg")
+    ]
 
 
 def do_main():
-    neptune.init('tati/nfl')
+    neptune.init("tati/nfl")
     # Create experiment with defined parameters
-    neptune.create_experiment(name=model_name,
-                              params=PARAMS,
-                              tags=[experiment_name, experiment_tag],
-                              upload_source_files=[os.path.basename(__file__), 'get_transforms.py', 'dataset.py'])
-    neptune.append_tags(f'fold_{fold}')   
+    neptune.create_experiment(
+        name=model_name,
+        params=PARAMS,
+        tags=[experiment_name, experiment_tag],
+        upload_source_files=[
+            os.path.basename(__file__),
+            "get_transforms.py",
+            "dataset.py",
+        ],
+    )
+    neptune.append_tags(f"fold_{fold}")
 
-    device = torch.device(f'cuda:{gpu_number}') if torch.cuda.is_available() else torch.device('cpu')
+    device = (
+        torch.device(f"cuda:{gpu_number}")
+        if torch.cuda.is_available()
+        else torch.device("cpu")
+    )
     print(device)
     # images
-    #train_boxes_df = pd.read_csv(META_FILE)
-    #train_images_df = pd.read_csv(FOLDS_FILE)
-    #print('Boxes original: ', len(train_boxes_df))
-    #print('Images original: ', len(train_images_df))
-    #images_val = train_images_df.loc[train_images_df['fold'] == fold].image.values
-    #images_train = train_images_df.loc[train_images_df['fold'] != fold].image.values 
-    #print(f'\nTrain images:{len(images_train)}, validation images {len(images_val)}')
+    # train_boxes_df = pd.read_csv(META_FILE)
+    # train_images_df = pd.read_csv(FOLDS_FILE)
+    # print('Boxes original: ', len(train_boxes_df))
+    # print('Images original: ', len(train_images_df))
+    # images_val = train_images_df.loc[train_images_df['fold'] == fold].image.values
+    # images_train = train_images_df.loc[train_images_df['fold'] != fold].image.values
+    # print(f'\nTrain images:{len(images_train)}, validation images {len(images_val)}')
     # videos
-    video_labels = pd.read_csv(f'{DATA_DIR}/video_meta.csv')
-    images_valid = video_labels.loc[video_labels['fold'] == fold].image_name.unique()
-    images_train = video_labels.loc[video_labels['fold'] != fold].image_name.unique()
-    print('images_valid: ', len(images_valid), images_valid[:5])
-    print('images_train: ', len(images_train), images_train[:5])
-
+    video_labels = pd.read_csv(f"{DATA_DIR}/video_meta.csv")
+    images_valid = video_labels.loc[video_labels["fold"] == fold].image_name.unique()
+    images_train = video_labels.loc[video_labels["fold"] != fold].image_name.unique()
+    print("images_valid: ", len(images_valid), images_valid[:5])
+    print("images_train: ", len(images_train), images_train[:5])
 
     # config models for train and validation
-    config = get_efficientdet_config('tf_efficientdet_d5')
+    config = get_efficientdet_config("tf_efficientdet_d5")
     net = EfficientDet(config, pretrained_backbone=False)
-    load_weights(net, '../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth')
+    load_weights(net, "../../timm-efficientdet-pytorch/efficientdet_d5-ef44aea8.pth")
     config.num_classes = 1
     config.image_size = image_size
-    net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
+    net.class_net = HeadNet(
+        config,
+        num_outputs=config.num_classes,
+        norm_kwargs=dict(eps=0.001, momentum=0.01),
+    )
     model_train = DetBenchTrain(net, config)
     model_eval = DetBenchEval(net, config)
-    print(f'Mode loaded, config{config}')
+    print(f"Mode loaded, config{config}")
 
     manager = ModelManager(model_train, model_eval, device)
 
-    
     # get datasets
     train_dataset = HelmetDataset(
-                images_dir = TRAIN_VIDEO,   
-                image_ids = images_train[:16],            
-                marking = video_labels,                               
-                transforms= get_train_transforms(image_size)                
-    )   
+        images_dir=TRAIN_VIDEO,
+        image_ids=images_train[:16],
+        marking=video_labels,
+        transforms=get_train_transforms(image_size),
+    )
 
     valid_dataset = HelmetDataset(
-                images_dir = TRAIN_VIDEO,   
-                image_ids=images_valid[:16],
-                marking=video_labels,
-                transforms=get_valid_transforms(image_size), 
+        images_dir=TRAIN_VIDEO,
+        image_ids=images_valid[:16],
+        marking=video_labels,
+        transforms=get_valid_transforms(image_size),
     )
 
     train_data_loader = DataLoader(
@@ -322,8 +385,8 @@ def do_main():
         shuffle=True,
         num_workers=num_workers,
         collate_fn=collate_fn,
-        drop_last=True
-     )
+        drop_last=True,
+    )
 
     valid_data_loader = DataLoader(
         valid_dataset,
@@ -331,32 +394,33 @@ def do_main():
         shuffle=False,
         num_workers=num_workers,
         collate_fn=collate_fn,
-        drop_last=False
+        drop_last=False,
     )
 
-    weights_file = f'../../checkpoints/{model_name}/{experiment_name}.pth'
+    weights_file = f"../../checkpoints/{model_name}/{experiment_name}.pth"
 
-    #pretrain_weights_file = f'{checkpoints_dir}/{experiment_name}.pth'    
-    #if os.path.exists(pretrain_weights_file):        
+    # pretrain_weights_file = f'{checkpoints_dir}/{experiment_name}.pth'
+    # if os.path.exists(pretrain_weights_file):
     #    print(f'Continue training, loading weights from {pretrain_weights_file}')
     #    load_weights(net, pretrain_weights_file)
 
     manager.run_train(
-        train_generator = train_data_loader, 
-        val_generator = valid_data_loader, 
-        n_epoches=n_epochs, 
+        train_generator=train_data_loader,
+        val_generator=valid_data_loader,
+        n_epoches=n_epochs,
         weights_file=weights_file,
-        factor=factor, 
-        start_lr=start_lr, 
-        min_lr=min_lr, 
-        lr_patience=lr_patience, 
-        overall_patience=overall_patience, 
-        loss_delta=loss_delta
+        factor=factor,
+        start_lr=start_lr,
+        min_lr=min_lr,
+        lr_patience=lr_patience,
+        overall_patience=overall_patience,
+        loss_delta=loss_delta,
     )
-    
-    # add tags 
-    neptune.log_text('save checkpoints as', weights_file[:-4])
+
+    # add tags
+    neptune.log_text("save checkpoints as", weights_file[:-4])
     neptune.stop()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     do_main()

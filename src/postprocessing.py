@@ -16,8 +16,8 @@ from scipy.ndimage.filters import maximum_filter
 
 
 def add_bottom_right(df):
-    df['right'] = df['left'] + df['width']
-    df['bottom'] = df['top'] + df['height']
+    df["right"] = df["left"] + df["width"]
+    df["bottom"] = df["top"] + df["height"]
     return df
 
 
@@ -28,16 +28,17 @@ def box_pair_distance(bbox1, bbox2):
     (x0_1, y0_1, x1_1, y1_1) = bbox1
     (x0_2, y0_2, x1_2, y1_2) = bbox2
 
-    x_1 = (x1_1 + x0_1)/2
-    x_2 = (x1_2 + x0_2)/2
-    y_1 = (y1_1 + y0_1)/2
-    y_2 = (y1_2 + y0_2)/2
+    x_1 = (x1_1 + x0_1) / 2
+    x_2 = (x1_2 + x0_2) / 2
+    y_1 = (y1_1 + y0_1) / 2
+    y_2 = (y1_2 + y0_2) / 2
     print(x_1, x_2, y_1, y_2)
     # get Eucledian distance
-    dist = (x_2 - x_1)**2 + (y_2 - y_1)**2
+    dist = (x_2 - x_1) ** 2 + (y_2 - y_1) ** 2
     print(np.sqrt(dist))
 
     return np.sqrt(dist)
+
 
 def box_pair_iou(bbox1, bbox2):
     bbox1 = [float(x) for x in bbox1]
@@ -72,7 +73,9 @@ def track_boxes_centers(videodf, dist=1, dist_thresh=0.8):
     n = len(videodf)
     inds = list(videodf.index)
     frames = [-1000] + sorted(videodf["frame"].unique().tolist())
-    ind2box = dict(zip(inds, videodf[["left", "top", "right", "bottom"]].values.tolist()))
+    ind2box = dict(
+        zip(inds, videodf[["left", "top", "right", "bottom"]].values.tolist())
+    )
     ind2track = {}
 
     for f, frame in enumerate(frames[1:]):
@@ -88,12 +91,12 @@ def track_boxes_centers(videodf, dist=1, dist_thresh=0.8):
                     box2 = ind2box[ind2]
                     a = box_pair_distance(box1, box2)
                     ###
-                    #TO DO
+                    # TO DO
                     # multiply by coefficient proportional frame - frames[f]
-                    print(f'Distance boxes: {a}')
+                    print(f"Distance boxes: {a}")
                     ###
-                   # dist_thresh = dist_thresh*(1 + (frame - frames[f])*0.2)                
-                    cost_matrix[i, j] = a/dist_thresh if a < dist_thresh else 1
+                    # dist_thresh = dist_thresh*(1 + (frame - frames[f])*0.2)
+                    cost_matrix[i, j] = a / dist_thresh if a < dist_thresh else 1
             row_is, col_js = linear_sum_assignment(cost_matrix)
             # assigned_cur_inds = [cur_inds[i] for i in row_is]
             for i, j in zip(row_is, col_js):
@@ -117,7 +120,9 @@ def track_boxes(videodf, dist=1, iou_thresh=0.8):
     n = len(videodf)
     inds = list(videodf.index)
     frames = [-1000] + sorted(videodf["frame"].unique().tolist())
-    ind2box = dict(zip(inds, videodf[["left", "top", "right", "bottom"]].values.tolist()))
+    ind2box = dict(
+        zip(inds, videodf[["left", "top", "right", "bottom"]].values.tolist())
+    )
     ind2track = {}
 
     for f, frame in enumerate(frames[1:]):
@@ -181,14 +186,18 @@ def add_tracking_centers(df, dist=1, dist_thresh=0.8) -> pd.DataFrame:
 def keep_maximums(df, iou_thresh=0.35, dist=2) -> pd.DataFrame:
     # track boxes across frames and keep only box with maximum score
     df = add_tracking(df, dist=dist, iou_thresh=iou_thresh)
-    df = df.sort_values(["video", "track", "scores"], ascending=False).drop_duplicates(["video", "track"])
+    df = df.sort_values(["video", "track", "scores"], ascending=False).drop_duplicates(
+        ["video", "track"]
+    )
     return df
 
 
 def keep_maximums_cent(df, dist_thresh=0.35, dist=2) -> pd.DataFrame:
     # track boxes across frames and keep only box with maximum score
     df = add_tracking_centers(df, dist=dist, dist_thresh=dist_thresh)
-    df = df.sort_values(["video", "track", "scores"], ascending=False).drop_duplicates(["video", "track"])
+    df = df.sort_values(["video", "track", "scores"], ascending=False).drop_duplicates(
+        ["video", "track"]
+    )
     return df
 
 
@@ -217,11 +226,11 @@ def test_keep_maximums(df, iou_thresh=0.35, dist=2):
     dummy,7,677,20,333,0.55810546875,20,697,353
 
     """
-    df_new = keep_maximums(df, iou_thresh=iou_thresh, dist=dist) 
-    print(f'Processed dataframe: \n{df_new.head(10)}')
+    df_new = keep_maximums(df, iou_thresh=iou_thresh, dist=dist)
+    print(f"Processed dataframe: \n{df_new.head(10)}")
     # check we have left 3 tracks
-    if df_new.track.count() != 3: 
-        print(f'Not right tracks, {df_new.track.values}')
+    if df_new.track.count() != 3:
+        print(f"Not right tracks, {df_new.track.values}")
     # assert df_new.track.count() == 3
 
 
@@ -243,28 +252,28 @@ def test_centers_track(df, dist_thresh=0.35, dist=7):
     dummy,7,677,20,333,0.55810546875,20,697,353
 
     """
-    df_new = keep_maximums_cent(df, dist_thresh=dist_thresh, dist=dist) 
-    print(f'Processed dataframe: \n{df_new.head(10)}')
+    df_new = keep_maximums_cent(df, dist_thresh=dist_thresh, dist=dist)
+    print(f"Processed dataframe: \n{df_new.head(10)}")
     # check we have left 3 tracks
-    if df_new.track.count() != 3: 
-        print(f'Not right tracks, {df_new.track.values}')
+    if df_new.track.count() != 3:
+        print(f"Not right tracks, {df_new.track.values}")
     # assert df_new.track.count() == 3
 
 
 if __name__ == "__main__":
-    df = pd.read_csv('../../preds/sample.csv')
-    print(f'Initial dataframe: \n{df.head(11)}')
+    df = pd.read_csv("../../preds/sample.csv")
+    print(f"Initial dataframe: \n{df.head(11)}")
 
     dist = 7
     num = 0
     dist_threshholds = [2, 4, 6, 8, 10, 13, 16, 20]
     for dist_thresh in dist_threshholds:
         num += 1
-        print(f'\n EXPERIMENT {num}: distance = {dist}, dist thres = {dist_thresh}')
+        print(f"\n EXPERIMENT {num}: distance = {dist}, dist thres = {dist_thresh}")
         test_centers_track(df, dist_thresh=dist_thresh, dist=dist)
 
-    #iou_threshholds = [0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
-    #for iou_thresh in iou_threshholds:
+    # iou_threshholds = [0.15, 0.2, 0.25, 0.3, 0.35, 0.4]
+    # for iou_thresh in iou_threshholds:
     #    num += 1
     #    print(f'\n EXPERIMENT {num}: distance = {dist}, IoU thres = {iou_thresh}')
     #    test_keep_maximums(df, iou_thresh=iou_thresh, dist=dist)

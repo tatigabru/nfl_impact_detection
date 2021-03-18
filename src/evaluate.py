@@ -5,21 +5,20 @@ from collections import defaultdict
 import warnings
 import pandas as pd
 
-warnings.simplefilter(action='ignore')
-
+warnings.simplefilter(action="ignore")
 
 
 def add_bottom_right(df):
-    df['right'] = df['left'] + df['width']
-    df['bottom'] = df['top'] + df['height']
+    df["right"] = df["left"] + df["width"]
+    df["bottom"] = df["top"] + df["height"]
     return df
 
 
 def pad_boxes(df, alpha=0.1):
-    df['left'] = df['left'] - alpha * df['width']
-    df['right'] = df['right'] + alpha * df['width']
-    df['top'] = df['top'] - alpha * df['height']
-    df['bottom'] = df['bottom'] + alpha * df['height']
+    df["left"] = df["left"] - alpha * df["width"]
+    df["right"] = df["right"] + alpha * df["width"]
+    df["top"] = df["top"] - alpha * df["height"]
+    df["bottom"] = df["bottom"] + alpha * df["height"]
     return df
 
 
@@ -38,7 +37,7 @@ def iou(bbox1, bbox2):
 
     # check if there is an overlap
     if overlap_x1 - overlap_x0 <= 0 or overlap_y1 - overlap_y0 <= 0:
-            return 0
+        return 0
 
     # if yes, calculate the ratio of the overlap to each ROI size and the unified size
     size_1 = (x1_1 - x0_1) * (y1_1 - y0_1)
@@ -54,7 +53,7 @@ def precision_calc_impact_boxes(gt_boxes, pred_boxes):
     cost_matrix = np.ones((len(gt_boxes), len(pred_boxes)))
     for i, box1 in enumerate(gt_boxes):
         for j, box2 in enumerate(pred_boxes):
-            dist = abs(box1[0]-box2[0])
+            dist = abs(box1[0] - box2[0])
             if dist > 4:
                 continue
             iou_score = iou(box1[1:], box2[1:])
@@ -128,7 +127,9 @@ def evaluate_boxes(gt_data, pred_data, impact=True, iou_thresh=0.35):
         if impact:
             tp, fp, fn = precision_calc_impact_boxes(gt_boxes, pred_boxes)
         else:
-            tp, fp, fn = precision_calc_boxes(gt_boxes, pred_boxes, iou_thresh=iou_thresh)
+            tp, fp, fn = precision_calc_boxes(
+                gt_boxes, pred_boxes, iou_thresh=iou_thresh
+            )
 
         ftp.append(tp)
         ffp.append(fp)
@@ -137,29 +138,31 @@ def evaluate_boxes(gt_data, pred_data, impact=True, iou_thresh=0.35):
     tp = np.sum(ftp)
     fp = np.sum(ffp)
     fn = np.sum(ffn)
-    
+
     return tp, fp, fn
 
 
 def get_data_by_video(df):
     data = {}
-    video_names = df['video'].unique()
+    video_names = df["video"].unique()
     for video_name in video_names:
-        videodf = df[df['video'] == video_name]
-        video_data = videodf.sort_values('frame')[['frame', 'left', 'top', 'right', 'bottom']].values
+        videodf = df[df["video"] == video_name]
+        video_data = videodf.sort_values("frame")[
+            ["frame", "left", "top", "right", "bottom"]
+        ].values
         data[video_name] = video_data
     return data
 
 
 def get_data_by_video_frame(df):
     data = defaultdict(dict)
-    video_names = df['video'].unique()
+    video_names = df["video"].unique()
     for video_name in video_names:
-        videodf = df[df['video'] == video_name]
-        frames = videodf['frame'].values
+        videodf = df[df["video"] == video_name]
+        frames = videodf["frame"].values
         for frame in frames:
-            framedf = videodf[videodf['frame'] == frame]
-            frame_data = framedf[['frame', 'left', 'top', 'right', 'bottom']].values
+            framedf = videodf[videodf["frame"] == frame]
+            frame_data = framedf[["frame", "left", "top", "right", "bottom"]].values
             data[video_name][frame] = frame_data
     return data
 
@@ -176,20 +179,20 @@ def evaluate_df(gtdf, preddf, video_names=None, impact=True, iou_thresh=0.35):
     :return: precision, recall, f1 score
     """
     if video_names is None:
-        video_names = preddf['video'].unique()
+        video_names = preddf["video"].unique()
     # add FNs for videos not predicted
-    gt_videos = set(gtdf['video'].unique())
-    pred_videos = set(preddf['video'].unique())
+    gt_videos = set(gtdf["video"].unique())
+    pred_videos = set(preddf["video"].unique())
     diff = gt_videos - pred_videos
     print(diff)
-    missed = gtdf[gtdf['video'].isin(diff)]
+    missed = gtdf[gtdf["video"].isin(diff)]
     fn_missed = missed.frame.count()
-    print(f'fn_missed: {fn_missed}')
+    print(f"fn_missed: {fn_missed}")
     # evaluate common videos
-    gtdf = gtdf[gtdf['video'].isin(video_names)]
-    preddf = preddf[preddf['video'].isin(video_names)]
-    print('Number of ground truth labels:', len(gtdf))
-    print('Number of predicted labels:', len(preddf))
+    gtdf = gtdf[gtdf["video"].isin(video_names)]
+    preddf = preddf[preddf["video"].isin(video_names)]
+    print("Number of ground truth labels:", len(gtdf))
+    print("Number of predicted labels:", len(preddf))
     gtdf = add_bottom_right(gtdf)
     preddf = add_bottom_right(preddf)
     if impact:
@@ -199,26 +202,30 @@ def evaluate_df(gtdf, preddf, video_names=None, impact=True, iou_thresh=0.35):
     else:
         gt_data = get_data_by_video_frame(gtdf)
         pred_data = get_data_by_video_frame(preddf)
-        tp, fp, fn = evaluate_boxes(gt_data, pred_data, impact=False, iou_thresh=iou_thresh)
+        tp, fp, fn = evaluate_boxes(
+            gt_data, pred_data, impact=False, iou_thresh=iou_thresh
+        )
     fn += fn_missed
     precision = tp / (tp + fp + 1e-6)
-    recall =  tp / (tp + fn +1e-6)
-    f1_score = 2*(precision*recall)/(precision+recall+1e-6)
-    print(f'TP: {tp}, FP: {fp}, FN: {fn}, PRECISION: {precision:.4f}, RECALL: {recall:.4f}, F1 SCORE: {f1_score}')
+    recall = tp / (tp + fn + 1e-6)
+    f1_score = 2 * (precision * recall) / (precision + recall + 1e-6)
+    print(
+        f"TP: {tp}, FP: {fp}, FN: {fn}, PRECISION: {precision:.4f}, RECALL: {recall:.4f}, F1 SCORE: {f1_score}"
+    )
 
     return precision, recall, f1_score
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     train_labels = pd.read_csv(train_labels_fp)
     train_labels = train_labels.query("frame != 0")
     print(len(train_labels))
-    gtdf = train_labels#.query("impact == 1 and visibility > 0 and confidence > 1")
+    gtdf = train_labels  # .query("impact == 1 and visibility > 0 and confidence > 1")
     print(len(gtdf))
-    preddf = pd.read_csv(project_fp + 'data/pred/run1_last_checkpoint_tati.csv')
+    preddf = pd.read_csv(project_fp + "data/pred/run1_last_checkpoint_tati.csv")
     print(len(preddf))
-    preddf = preddf[preddf['scores'] > 0.3]
+    preddf = preddf[preddf["scores"] > 0.3]
     print(len(preddf))
-    valid_video_names = preddf['video'].unique()
-    print('Number of videos for evaluation:', len(valid_video_names))
+    valid_video_names = preddf["video"].unique()
+    print("Number of videos for evaluation:", len(valid_video_names))
     prec, rec, f1 = evaluate_df(gtdf, preddf, video_names=None, impact=False)
