@@ -1,0 +1,60 @@
+model:
+  name: shufflenet
+  num_classes: 2
+  clip_length: 16
+
+optimizer:
+  fp16: True
+  name: RAdam
+  weight_decay: 1e-5
+  no_wd_on_bias: True
+  learning_rate: 2e-4
+
+scheduler:
+  name: none
+
+train:
+  from_cached_tensors: True
+  calculate_overlaps: False
+  tensor_train_dir: "uint/train/all"
+  tensor_valid_dir: "uint/valid/all"
+
+  epochs: 30
+  train_image_size: [720, 1280]
+  valid_image_size: [720, 1280]
+  clip_image_size: [64, 64]
+
+  video_augmentations: none
+  frame_augmentations: none
+
+  fast: False
+  fold: 0
+  show: True
+  clips_per_play: 256
+  clips_per_frame: 1
+  clip_frame_step: 1
+  clip_center_frame: 8
+  propagate_frames: 1
+
+  sampler:
+  impact_p: 1
+  overlap_p: 1
+  other_p: 0.3
+
+loaders:
+  train:
+    batch_size: 64
+    shuffle: True
+    workers: 12
+
+  valid:
+    batch_size: 64
+    shuffle: False
+    workers: 12
+
+
+
+
+
+
+

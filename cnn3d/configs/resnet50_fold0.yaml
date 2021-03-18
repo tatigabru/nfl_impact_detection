@@ -1,0 +1,66 @@
+model:
+  name: resnet
+  num_classes: 2
+  clip_length: 16
+  model_depth: 50
+
+optimizer:
+  fp16: True
+  name: RAdam
+  weight_decay: 1e-5
+  no_wd_on_bias: True
+  learning_rate: 2e-4
+
+scheduler:
+  name: none
+
+train:
+  from_cached_tensors: True
+  calculate_overlaps: False
+  #tensor_train_dir: "/media/anastasiya/4TB_Ext4/NFL/tensors/train/all"
+  #tensor_valid_dir: "/media/anastasiya/4TB_Ext4/NFL/tensors/valid/all"
+  #tensor_train_dir: "/home/anastasiya/Kaggle/NFL/data/kaggle/tensors/uint/train"
+  #tensor_train_dir: "/media/anastasiya/474de71a-89a9-46af-8cf1-a221dfd868a0/home/anastasia/NFL/kaggle/tensors/train/uint/all"
+  #tensor_valid_dir: "/media/anastasiya/474de71a-89a9-46af-8cf1-a221dfd868a0/home/anastasia/NFL/kaggle/tensors/valid/all"
+  tensor_train_dir: "uint/train/all"
+  tensor_valid_dir: "uint/valid/all"
+
+  epochs: 0
+  train_image_size: [720, 1280]
+  valid_image_size: [720, 1280]
+  clip_image_size: [64, 64]
+
+  video_augmentations: none
+  frame_augmentations: none
+
+  fast: False
+  fold: 0
+  show: True
+  clips_per_play: 256
+  clips_per_frame: 1
+  clip_frame_step: 1
+  clip_center_frame: 8
+  propagate_frames: 1
+
+  sampler:
+  impact_p: 1
+  overlap_p: 1
+  other_p: 0.3
+
+loaders:
+  train:
+    batch_size: 64
+    shuffle: True
+    workers: 12
+
+  valid:
+    batch_size: 128
+    shuffle: False
+    workers: 6
+
+
+
+
+
+
+
